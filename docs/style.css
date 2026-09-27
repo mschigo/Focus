@@ -302,6 +302,18 @@ main {
   flex-shrink: 0;
 }
 
+/* Kleines Farbquadrat für die Bereichsfarbe – bewusst klein statt als
+   Zeilenhintergrund, damit die (helle) Farbe im Dark Mode nicht störend wirkt. */
+.bereich-farbe-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
 .aufgabe-row__main {
   flex: 1;
   min-width: 0;

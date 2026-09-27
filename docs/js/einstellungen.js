@@ -221,7 +221,12 @@ const Einstellungen = {
       btn.type = "button";
       btn.className = "chip farbe-chip" + (option.hex === this.ausgewaehlteFarbe ? " is-selected" : "");
       btn.textContent = option.name;
-      if (option.hex) btn.style.background = option.hex;
+      if (option.hex) {
+        btn.style.background = option.hex;
+        // Die Farboptionen sind bewusst helle Pastelltöne – Schrift deshalb
+        // immer dunkel halten, sonst im Dark Mode (heller Text) unlesbar.
+        btn.style.color = "#1A1A1A";
+      }
       btn.addEventListener("click", () => {
         this.ausgewaehlteFarbe = option.hex;
         container.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-selected"));
