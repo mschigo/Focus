@@ -3,6 +3,8 @@
  */
 
 const App = {
+  _viewsInitialisiert: false,
+
   async init() {
     this._wireLoginForm();
     this._wireAllgemeineUi();
@@ -10,9 +12,21 @@ const App = {
     Store.onAuthChange((eingeloggt) => {
       if (eingeloggt) {
         this._zeigeAppShell();
-        Dashboard.init();
-        Aufgabenliste.init();
-        Einstellungen.init();
+
+        // Supabase meldet "eingeloggt" bei bestehender Sitzung mehrfach
+        // (z. B. beim Laden UND direkt danach erneut, oder bei einer
+        // Token-Erneuerung im Hintergrund). Die Event-Handler der Views
+        // dürfen deshalb nur einmal verdrahtet werden – sonst legt ein
+        // einziges Absenden des Formulars die Aufgabe mehrfach an.
+        if (!this._viewsInitialisiert) {
+          this._viewsInitialisiert = true;
+          Dashboard.init();
+          Aufgabenliste.init();
+          Einstellungen.init();
+        } else {
+          Dashboard.render();
+          Einstellungen.render();
+        }
       } else {
         this._zeigeLoginScreen();
       }
