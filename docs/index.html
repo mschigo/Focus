@@ -53,8 +53,8 @@
     <nav class="tabbar" id="tabbar">
       <button class="tab-btn is-active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="aufgaben">Aufgaben</button>
-      <button class="tab-btn" data-tab="bereiche" disabled title="Kommt später">Bereiche</button>
-      <button class="tab-btn" data-tab="einstellungen" disabled title="Kommt später">Einstellungen</button>
+      <button class="tab-btn" data-tab="bereiche">Bereiche</button>
+      <button class="tab-btn" data-tab="einstellungen">Einstellungen</button>
     </nav>
   </header>
 
@@ -164,14 +164,103 @@
 
     </section>
 
-    <!-- ===================== BEREICHE (folgt in Schritt 3) ===================== -->
+    <!-- ===================== BEREICHE ===================== -->
     <section id="view-bereiche" class="view">
-      <p class="hinweis-box">Diese Ansicht kommt später.</p>
+      <div class="filter-row">
+        <div class="filter-group">
+          <span class="filter-group__label">Bereich</span>
+          <div class="chip-list" id="bereichsansicht-bereich-filter"></div>
+        </div>
+      </div>
+      <div class="sektionen" id="bereichsansicht-gruppen"></div>
     </section>
 
-    <!-- ===================== EINSTELLUNGEN (folgt in Schritt 3) ===================== -->
+    <!-- ===================== EINSTELLUNGEN ===================== -->
     <section id="view-einstellungen" class="view">
-      <p class="hinweis-box">Diese Ansicht kommt später.</p>
+
+      <div class="card">
+        <h2 class="card-title">Bereiche</h2>
+        <div class="form-field">
+          <label for="einst-bereich-select">Bereich</label>
+          <select id="einst-bereich-select" class="form-input"></select>
+        </div>
+        <div class="form-field">
+          <label for="einst-bereich-umbenennen">Umbenennen zu</label>
+          <input type="text" id="einst-bereich-umbenennen" class="form-input" />
+        </div>
+        <div class="btn-row">
+          <button type="button" id="einst-bereich-umbenennen-btn" class="btn-secondary">Umbenennen</button>
+          <button type="button" id="einst-bereich-loeschen-btn" class="btn-danger">Bereich löschen</button>
+        </div>
+
+        <div class="form-row" style="margin-top: 16px;">
+          <div class="form-field" style="flex: 2;">
+            <label for="einst-neuer-bereich">Neuer Bereich</label>
+            <input type="text" id="einst-neuer-bereich" class="form-input" placeholder="Name…" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="einst-bereich-hinzufuegen-btn" class="btn-primary">Hinzufügen</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Projekte (im gewählten Bereich)</h2>
+        <div class="form-field">
+          <label for="einst-projekt-select">Projekt</label>
+          <select id="einst-projekt-select" class="form-input"></select>
+        </div>
+        <div class="form-field">
+          <label for="einst-projekt-umbenennen">Umbenennen zu</label>
+          <input type="text" id="einst-projekt-umbenennen" class="form-input" />
+        </div>
+        <div class="btn-row">
+          <button type="button" id="einst-projekt-umbenennen-btn" class="btn-secondary">Umbenennen</button>
+          <button type="button" id="einst-projekt-loeschen-btn" class="btn-danger">Projekt löschen</button>
+        </div>
+
+        <div class="form-row" style="margin-top: 16px;">
+          <div class="form-field" style="flex: 2;">
+            <label for="einst-neues-projekt">Neues Projekt</label>
+            <input type="text" id="einst-neues-projekt" class="form-input" placeholder="Name…" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="einst-projekt-hinzufuegen-btn" class="btn-primary">Hinzufügen</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Bereichsfarbe</h2>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
+          Nur auf diesem Gerät gespeichert, wie in der Windows-App.
+        </p>
+        <div class="chip-list" id="einst-farbe-optionen"></div>
+        <div class="btn-row">
+          <button type="button" id="einst-farbe-speichern-btn" class="btn-primary">Farbe speichern</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Darstellung</h2>
+        <div class="chip-list" id="einst-darkmode-optionen"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Daten sichern</h2>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
+          Exportiert bzw. importiert alle Aufgaben, Projekte und Bereiche als JSON-Datei –
+          kompatibel mit der aufgaben.json der Windows-App.
+        </p>
+        <div class="btn-row">
+          <button type="button" id="einst-export-btn" class="btn-secondary">Exportieren</button>
+          <label class="btn-secondary" style="cursor: pointer;">
+            Importieren
+            <input type="file" id="einst-import-input" accept="application/json" hidden />
+          </label>
+        </div>
+      </div>
+
     </section>
 
   </main>
@@ -196,6 +285,8 @@
 <script src="js/store.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/aufgabenliste.js"></script>
+<script src="js/bereichsansicht.js"></script>
+<script src="js/einstellungen.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

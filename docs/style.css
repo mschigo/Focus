@@ -28,8 +28,11 @@
   --breakpoint-mobile: 600px;
 }
 
+/* Folgt automatisch dem System – außer die Einstellungen-Seite hat über
+   data-theme eine manuelle Wahl (Hell/Dunkel) gesetzt, siehe LokaleEinstellungen
+   in store.js. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-bg: #121212;
     --color-surface: #1E1E1E;
     --color-border: #333333;
@@ -38,6 +41,16 @@
     --color-p3-bg: #2A2A2A;
     --color-p4-bg: #262A2B;
   }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #121212;
+  --color-surface: #1E1E1E;
+  --color-border: #333333;
+  --color-text: #F0F0F0;
+  --color-text-muted: #AAAAAA;
+  --color-p3-bg: #2A2A2A;
+  --color-p4-bg: #262A2B;
 }
 
 * { box-sizing: border-box; }
@@ -270,6 +283,7 @@ main {
   gap: 10px;
   padding: 10px 14px;
   border-top: 1px solid var(--color-border);
+  border-left: 4px solid transparent;
   cursor: pointer;
 }
 
@@ -629,6 +643,7 @@ select.form-input {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
+  border-left: 4px solid transparent;
 }
 
 .liste-item__main {
@@ -688,4 +703,25 @@ select.form-input {
   gap: 8px;
   margin-top: 20px;
   flex-wrap: wrap;
+}
+
+/* ---------- Einstellungen ---------- */
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.farbe-chip {
+  border: 2px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.chip.farbe-chip.is-selected {
+  background: inherit;
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary);
 }

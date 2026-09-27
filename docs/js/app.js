@@ -12,6 +12,8 @@ const App = {
         this._zeigeAppShell();
         Dashboard.init();
         Aufgabenliste.init();
+        Bereichsansicht.init();
+        Einstellungen.init();
       } else {
         this._zeigeLoginScreen();
       }

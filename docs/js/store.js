@@ -397,6 +397,83 @@ const Store = {
     return projekt;
   },
 
+  renameBereich(altName, neuName) {
+    this._pruefeGeladen();
+    if (!altName || !altName.trim() || !neuName || !neuName.trim()) return;
+
+    const alt = altName.trim();
+    const neu = neuName.trim();
+
+    const index = this._daten.Konfiguration.Bereiche.findIndex((b) => (b || "").trim().toLowerCase() === alt.toLowerCase());
+    if (index === -1) return;
+
+    const konflikt = this._daten.Konfiguration.Bereiche.findIndex(
+      (b, i) => i !== index && (b || "").trim().toLowerCase() === neu.toLowerCase()
+    );
+    if (konflikt !== -1) {
+      throw new Error(`Ein Bereich mit dem Namen "${neu}" existiert bereits.`);
+    }
+
+    this._daten.Konfiguration.Bereiche[index] = neu;
+
+    for (const projekt of this._daten.Projekte) {
+      if (projekt.Bereich.toLowerCase() === alt.toLowerCase()) {
+        projekt.Bereich = neu;
+      }
+    }
+
+    this.speichern();
+  },
+
+  deleteBereich(name) {
+    this._pruefeGeladen();
+    if (!name || !name.trim()) return;
+
+    const n = name.trim();
+
+    if (this._daten.Projekte.some((p) => p.Bereich.toLowerCase() === n.toLowerCase())) {
+      throw new Error(`Der Bereich "${n}" hat noch Projekte und kann nicht gelöscht werden.`);
+    }
+
+    this._daten.Konfiguration.Bereiche = this._daten.Konfiguration.Bereiche.filter(
+      (b) => (b || "").trim().toLowerCase() !== n.toLowerCase()
+    );
+    this.speichern();
+  },
+
+  renameProjekt(projektId, neuerName) {
+    this._pruefeGeladen();
+    if (!neuerName || !neuerName.trim()) return;
+
+    const projekt = this._daten.Projekte.find((p) => p.Id === projektId);
+    if (!projekt) return;
+
+    const neu = neuerName.trim();
+
+    const konflikt = this._daten.Projekte.some(
+      (p) => p.Id !== projektId && p.Bereich.toLowerCase() === projekt.Bereich.toLowerCase() && p.Name.toLowerCase() === neu.toLowerCase()
+    );
+    if (konflikt) {
+      throw new Error(`Im Bereich "${projekt.Bereich}" existiert bereits ein Projekt mit diesem Namen.`);
+    }
+
+    projekt.Name = neu;
+    this.speichern();
+  },
+
+  deleteProjekt(projektId) {
+    this._pruefeGeladen();
+
+    const projekt = this._daten.Projekte.find((p) => p.Id === projektId);
+    if (!projekt) return;
+
+    // Alle Aufgaben, die zu diesem Projekt gehören, werden mitgelöscht (kein Papierkorb) –
+    // wie in der MAUI-App.
+    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.ProjektId !== projektId);
+    this._daten.Projekte = this._daten.Projekte.filter((p) => p.Id !== projektId);
+    this.speichern();
+  },
+
   // ---------------------------------------------------------------
   // Import / Export (weiterhin nützlich als Backup bzw. zum Übertragen
   // aus/in die MAUI-App)
@@ -469,3 +546,102 @@ const Anzeige = {
     this._toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
   },
 };
+
+// ---------------------------------------------------------------
+// Lokale (geräteweise) Einstellungen – entspricht AppSettingsService.cs /
+// Preferences in der MAUI-App: Bereichsfarben und Dark-Mode-Wahl werden
+// bewusst NICHT über Supabase synchronisiert, sondern pro Gerät im
+// Browser gespeichert, genau wie in der Windows-App.
+// ---------------------------------------------------------------
+
+const LOKALE_EINSTELLUNGEN_KEY = "focus.lokaleEinstellungen.v1";
+
+function anwendenDarkMode(value) {
+  if (value === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else if (value === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+const LokaleEinstellungen = {
+  _daten: null,
+
+  _laden() {
+    if (this._daten) return this._daten;
+
+    try {
+      const raw = localStorage.getItem(LOKALE_EINSTELLUNGEN_KEY);
+      this._daten = raw ? JSON.parse(raw) : {};
+    } catch {
+      this._daten = {};
+    }
+
+    this._daten.bereichFarben ??= {};
+    return this._daten;
+  },
+
+  _speichern() {
+    localStorage.setItem(LOKALE_EINSTELLUNGEN_KEY, JSON.stringify(this._daten));
+  },
+
+  getBereichFarbe(bereichName) {
+    if (!bereichName) return "";
+    return this._laden().bereichFarben[bereichName.trim()] || "";
+  },
+
+  setBereichFarbe(bereichName, hex) {
+    if (!bereichName || !bereichName.trim()) return;
+    const d = this._laden();
+    const key = bereichName.trim();
+
+    if (!hex) {
+      delete d.bereichFarben[key];
+    } else {
+      d.bereichFarben[key] = hex;
+    }
+
+    this._speichern();
+  },
+
+  renameBereichFarbe(alterName, neuerName) {
+    if (!alterName || !neuerName) return;
+    const d = this._laden();
+    const alt = alterName.trim();
+    const neu = neuerName.trim();
+
+    if (d.bereichFarben[alt] === undefined) return;
+
+    d.bereichFarben[neu] = d.bereichFarben[alt];
+    delete d.bereichFarben[alt];
+    this._speichern();
+  },
+
+  removeBereichFarbe(bereichName) {
+    if (!bereichName) return;
+    const d = this._laden();
+    const key = bereichName.trim();
+
+    if (d.bereichFarben[key] === undefined) return;
+
+    delete d.bereichFarben[key];
+    this._speichern();
+  },
+
+  /** null = folgt Systemeinstellung, sonst "dark" oder "light". */
+  getDarkMode() {
+    return this._laden().darkMode ?? null;
+  },
+
+  setDarkMode(value) {
+    const d = this._laden();
+    d.darkMode = value;
+    this._speichern();
+    anwendenDarkMode(value);
+  },
+};
+
+// Sofort beim Laden anwenden, damit die Seite nicht kurz im falschen Theme aufblitzt.
+anwendenDarkMode(LokaleEinstellungen.getDarkMode());
