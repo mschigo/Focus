@@ -232,7 +232,10 @@ const Dashboard = {
     row.addEventListener("click", () => App.oeffneDetails(aufgabe.Id));
 
     const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich);
-    if (bereichFarbe) row.style.borderLeftColor = bereichFarbe;
+    if (bereichFarbe) {
+      row.style.backgroundColor = bereichFarbe;
+      row.style.borderLeftColor = bereichFarbe;
+    }
 
     const heute = heuteIso();
     const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.IstAktiv;
