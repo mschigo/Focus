@@ -359,6 +359,18 @@ const Store = {
     this.speichern();
   },
 
+  /** Löscht alle erledigten Aufgaben endgültig. Gibt die Anzahl gelöschter Aufgaben zurück. */
+  loescheErledigteAufgaben() {
+    this._pruefeGeladen();
+
+    const anzahlVorher = this._daten.Aufgaben.length;
+    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Status !== AufgabenStatus.Erledigt);
+    const anzahlGeloescht = anzahlVorher - this._daten.Aufgaben.length;
+
+    if (anzahlGeloescht > 0) this.speichern();
+    return anzahlGeloescht;
+  },
+
   // ---------------------------------------------------------------
   // Schreiben – Bereiche & Projekte
   // ---------------------------------------------------------------

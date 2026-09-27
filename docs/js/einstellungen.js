@@ -25,6 +25,7 @@ const Einstellungen = {
     this._wireBereiche();
     this._wireProjekte();
     this._wireFarben();
+    this._wireAufgabenAufraeumen();
     this._wireDaten();
     this.render();
   },
@@ -256,6 +257,26 @@ const Einstellungen = {
       });
       container.appendChild(btn);
     }
+  },
+
+  // ---------------------------------------------------------------
+  // Aufgaben aufräumen (erledigte Aufgaben endgültig löschen)
+  // ---------------------------------------------------------------
+
+  _wireAufgabenAufraeumen() {
+    document.getElementById("einst-erledigte-loeschen-btn").addEventListener("click", () => {
+      const anzahl = Store.getAufgaben().filter((a) => a.Status === AufgabenStatus.Erledigt).length;
+
+      if (anzahl === 0) {
+        Anzeige.zeigeToast("Keine erledigten Aufgaben vorhanden.");
+        return;
+      }
+
+      if (!window.confirm(`${anzahl} erledigte Aufgabe(n) wirklich endgültig löschen?`)) return;
+
+      const geloescht = Store.loescheErledigteAufgaben();
+      Anzeige.zeigeToast(`${geloescht} erledigte Aufgabe(n) gelöscht.`);
+    });
   },
 
   // ---------------------------------------------------------------
