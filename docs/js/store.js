@@ -1,0 +1,471 @@
+/**
+ * Focus Web – Datenmodell & Speicher.
+ *
+ * Datenformat entspricht exakt der aufgaben.json aus der MAUI-App
+ * (siehe Models/AufgabeDto.cs, Models/Projekt.cs, Models/AufgabenDatenDatei.cs) –
+ * die kompletten Daten liegen als ein JSON-Objekt in der Spalte "daten" einer
+ * Zeile der Supabase-Tabelle "focus_daten" (eine Zeile pro angemeldetem Nutzer,
+ * per Row-Level-Security abgesichert, siehe SQL aus dem Setup-Schritt).
+ *
+ * Architektur: Nach dem Login wird die Zeile einmal geladen und in einem
+ * In-Memory-Zwischenspeicher (Store._daten) gehalten. Lesefunktionen
+ * (getAufgaben/getBereiche/getProjekte) bleiben dadurch synchron und einfach
+ * zu benutzen. Schreibende Funktionen aktualisieren den Zwischenspeicher
+ * sofort (für eine reaktionsschnelle UI) und schreiben im Hintergrund nach
+ * Supabase durch.
+ */
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const Prioritaet = Object.freeze({
+  P1Dringend: "P1Dringend",
+  P2Wichtig: "P2Wichtig",
+  P3Normal: "P3Normal",
+  P4Spaeter: "P4Spaeter",
+});
+
+const PRIORITAET_REIHENFOLGE = [
+  Prioritaet.P1Dringend,
+  Prioritaet.P2Wichtig,
+  Prioritaet.P3Normal,
+  Prioritaet.P4Spaeter,
+];
+
+const AufgabenStatus = Object.freeze({
+  Offen: "Offen",
+  InArbeit: "InArbeit",
+  Erledigt: "Erledigt",
+});
+
+function neueId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function heuteIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function wochenEndeIso(heute) {
+  const d = new Date(`${heute}T00:00:00`);
+  const dayOfWeek = d.getDay();
+  d.setDate(d.getDate() + (6 - dayOfWeek));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function leereDaten() {
+  return { Aufgaben: [], Projekte: [], Konfiguration: { Bereiche: [] } };
+}
+
+/** Beispieldaten für eine frisch angelegte Nutzer-Zeile. */
+function demoDaten() {
+  const bereichPersoenlich = "Privat";
+  const bereichArbeit = "Arbeit";
+
+  const projektAllgemein = { Id: neueId(), Name: "Allgemein", Bereich: bereichArbeit };
+  const projektHaushalt = { Id: neueId(), Name: "Haushalt", Bereich: bereichPersoenlich };
+
+  const heute = heuteIso();
+
+  return {
+    Aufgaben: [
+      {
+        Id: neueId(),
+        Titel: "Willkommen bei Focus!",
+        ProjektId: projektAllgemein.Id,
+        Prioritaet: Prioritaet.P2Wichtig,
+        Status: AufgabenStatus.Offen,
+        Faelligkeit: heute,
+        Notizen: "Das ist eine Beispielaufgabe. Lege eigene Aufgaben über 'Aufgaben' an (folgt im nächsten Schritt).",
+        Link: "",
+        Checkliste: [],
+        ErstelltAm: nowIso(),
+        GeaendertAm: nowIso(),
+      },
+      {
+        Id: neueId(),
+        Titel: "Einkaufsliste schreiben",
+        ProjektId: projektHaushalt.Id,
+        Prioritaet: Prioritaet.P3Normal,
+        Status: AufgabenStatus.Offen,
+        Faelligkeit: null,
+        Notizen: "",
+        Link: "",
+        Checkliste: [],
+        ErstelltAm: nowIso(),
+        GeaendertAm: nowIso(),
+      },
+    ],
+    Projekte: [projektAllgemein, projektHaushalt],
+    Konfiguration: { Bereiche: [bereichArbeit, bereichPersoenlich] },
+  };
+}
+
+function normalisiereDaten(parsed) {
+  return {
+    Aufgaben: Array.isArray(parsed?.Aufgaben) ? parsed.Aufgaben : [],
+    Projekte: Array.isArray(parsed?.Projekte) ? parsed.Projekte : [],
+    Konfiguration: { Bereiche: Array.isArray(parsed?.Konfiguration?.Bereiche) ? parsed.Konfiguration.Bereiche : [] },
+  };
+}
+
+const Store = {
+  _daten: null,
+  _userId: null,
+  _authCallbacks: [],
+
+  // ---------------------------------------------------------------
+  // Auth
+  // ---------------------------------------------------------------
+
+  onAuthChange(callback) {
+    this._authCallbacks.push(callback);
+  },
+
+  _notifyAuthChange(eingeloggt) {
+    for (const cb of this._authCallbacks) {
+      try {
+        cb(eingeloggt);
+      } catch (err) {
+        console.error("Focus: Fehler in Auth-Callback.", err);
+      }
+    }
+  },
+
+  async starteAuthUeberwachung() {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) {
+      console.error("Focus: Fehler beim Prüfen der Sitzung.", error);
+    }
+
+    if (data?.session) {
+      await this._ladeFuerNutzer(data.session.user.id);
+      this._notifyAuthChange(true);
+    } else {
+      this._notifyAuthChange(false);
+    }
+
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        try {
+          await this._ladeFuerNutzer(session.user.id);
+          this._notifyAuthChange(true);
+        } catch (err) {
+          console.error("Focus: Fehler beim Laden nach Login.", err);
+          Anzeige.zeigeToast("Daten konnten nicht geladen werden: " + err.message, true);
+        }
+      } else {
+        this._daten = null;
+        this._userId = null;
+        this._notifyAuthChange(false);
+      }
+    });
+  },
+
+  async anmelden(email, passwort) {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password: passwort });
+    if (error) throw error;
+  },
+
+  async registrieren(email, passwort) {
+    const { error } = await supabaseClient.auth.signUp({ email, password: passwort });
+    if (error) throw error;
+  },
+
+  async abmelden() {
+    await supabaseClient.auth.signOut();
+  },
+
+  async _ladeFuerNutzer(userId) {
+    this._userId = userId;
+
+    const { data, error } = await supabaseClient
+      .from("focus_daten")
+      .select("daten")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data && data.daten) {
+      this._daten = normalisiereDaten(data.daten);
+      return;
+    }
+
+    // Erste Anmeldung dieses Nutzers: Zeile mit Beispieldaten anlegen.
+    this._daten = demoDaten();
+    const { error: insertError } = await supabaseClient
+      .from("focus_daten")
+      .insert({ user_id: userId, daten: this._daten });
+
+    if (insertError) throw insertError;
+  },
+
+  // ---------------------------------------------------------------
+  // Speichern (Zwischenspeicher sofort, Supabase im Hintergrund)
+  // ---------------------------------------------------------------
+
+  speichern() {
+    document.dispatchEvent(new CustomEvent("focus:datenGeaendert"));
+    this._persistiereImHintergrund();
+  },
+
+  async _persistiereImHintergrund() {
+    if (!this._userId) return;
+
+    const { error } = await supabaseClient
+      .from("focus_daten")
+      .update({ daten: this._daten, aktualisiert_am: nowIso() })
+      .eq("user_id", this._userId);
+
+    if (error) {
+      console.error("Focus: Fehler beim Speichern in Supabase.", error);
+      Anzeige.zeigeToast("Speichern fehlgeschlagen (offline?): " + error.message, true);
+    }
+  },
+
+  _pruefeGeladen() {
+    if (!this._daten) {
+      throw new Error("Daten sind noch nicht geladen. Bitte zuerst anmelden.");
+    }
+  },
+
+  // ---------------------------------------------------------------
+  // Lesen
+  // ---------------------------------------------------------------
+
+  /** Alle Aufgaben inkl. aufgelöster Anzeigefelder Bereich/ProjektName. */
+  getAufgaben() {
+    this._pruefeGeladen();
+
+    const projektLookup = new Map(this._daten.Projekte.map((p) => [p.Id, p]));
+    const heute = heuteIso();
+
+    return this._daten.Aufgaben.map((a) => {
+      const projekt = projektLookup.get(a.ProjektId);
+      const istAktiv = a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit;
+      const istUeberfaellig = !!a.Faelligkeit && a.Faelligkeit < heute && istAktiv;
+
+      return {
+        ...a,
+        Bereich: projekt ? projekt.Bereich : "",
+        ProjektName: projekt ? projekt.Name : "",
+        IstAktiv: istAktiv,
+        IstAbgeschwaecht: a.Status === AufgabenStatus.Erledigt,
+        IstUeberfaellig: istUeberfaellig,
+      };
+    });
+  },
+
+  getBereiche() {
+    this._pruefeGeladen();
+
+    const gesehen = new Set();
+    const ergebnis = [];
+    for (const b of this._daten.Konfiguration.Bereiche) {
+      if (!b || !b.trim()) continue;
+      const key = b.trim().toLowerCase();
+      if (gesehen.has(key)) continue;
+      gesehen.add(key);
+      ergebnis.push(b.trim());
+    }
+    return ergebnis;
+  },
+
+  getProjekte(bereich = null) {
+    this._pruefeGeladen();
+
+    let liste = this._daten.Projekte;
+    if (bereich && bereich.trim()) {
+      const b = bereich.trim().toLowerCase();
+      liste = liste.filter((p) => (p.Bereich || "").trim().toLowerCase() === b);
+    }
+    return [...liste].sort((a, b) => a.Name.localeCompare(b.Name, "de"));
+  },
+
+  // ---------------------------------------------------------------
+  // Schreiben – Aufgaben
+  // ---------------------------------------------------------------
+
+  addOrUpdateAufgabe(aufgabe) {
+    this._pruefeGeladen();
+
+    if (!aufgabe.ProjektId || !this._daten.Projekte.some((p) => p.Id === aufgabe.ProjektId)) {
+      throw new Error("Die Aufgabe muss einem gültigen Projekt zugeordnet sein.");
+    }
+
+    const now = nowIso();
+    const index = this._daten.Aufgaben.findIndex((a) => a.Id === aufgabe.Id);
+
+    if (index === -1) {
+      const neu = {
+        Id: aufgabe.Id || neueId(),
+        Titel: aufgabe.Titel,
+        ProjektId: aufgabe.ProjektId,
+        Prioritaet: aufgabe.Prioritaet || Prioritaet.P3Normal,
+        Status: aufgabe.Status || AufgabenStatus.Offen,
+        Faelligkeit: aufgabe.Faelligkeit || null,
+        Notizen: aufgabe.Notizen || "",
+        Link: aufgabe.Link || "",
+        Checkliste: aufgabe.Checkliste || [],
+        ErstelltAm: now,
+        GeaendertAm: now,
+      };
+      this._daten.Aufgaben.push(neu);
+    } else {
+      const bestehend = this._daten.Aufgaben[index];
+      this._daten.Aufgaben[index] = {
+        ...bestehend,
+        Titel: aufgabe.Titel,
+        ProjektId: aufgabe.ProjektId,
+        Prioritaet: aufgabe.Prioritaet,
+        Status: aufgabe.Status,
+        Faelligkeit: aufgabe.Faelligkeit || null,
+        Notizen: aufgabe.Notizen || "",
+        Link: aufgabe.Link || "",
+        Checkliste: aufgabe.Checkliste || [],
+        GeaendertAm: now,
+      };
+    }
+
+    this.speichern();
+  },
+
+  setAufgabenStatus(id, status) {
+    this._pruefeGeladen();
+
+    const aufgabe = this._daten.Aufgaben.find((a) => a.Id === id);
+    if (!aufgabe) return;
+
+    aufgabe.Status = status;
+    aufgabe.GeaendertAm = nowIso();
+    this.speichern();
+  },
+
+  endgueltigLoeschen(id) {
+    this._pruefeGeladen();
+    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Id !== id);
+    this.speichern();
+  },
+
+  // ---------------------------------------------------------------
+  // Schreiben – Bereiche & Projekte
+  // ---------------------------------------------------------------
+
+  addBereich(name) {
+    this._pruefeGeladen();
+    if (!name || !name.trim()) return;
+
+    const n = name.trim();
+    if (this._daten.Konfiguration.Bereiche.some((b) => (b || "").trim().toLowerCase() === n.toLowerCase())) return;
+
+    this._daten.Konfiguration.Bereiche.push(n);
+    this.speichern();
+  },
+
+  addProjekt(bereich, name) {
+    this._pruefeGeladen();
+
+    if (!bereich || !bereich.trim()) throw new Error("Bereich ist erforderlich.");
+    if (!name || !name.trim()) throw new Error("Projektname ist erforderlich.");
+
+    const b = bereich.trim();
+    const n = name.trim();
+
+    if (!this._daten.Konfiguration.Bereiche.some((x) => (x || "").trim().toLowerCase() === b.toLowerCase())) {
+      throw new Error(`Der Bereich "${b}" existiert nicht.`);
+    }
+
+    if (this._daten.Projekte.some((p) => p.Bereich.toLowerCase() === b.toLowerCase() && p.Name.toLowerCase() === n.toLowerCase())) {
+      throw new Error(`Im Bereich "${b}" existiert bereits ein Projekt mit diesem Namen.`);
+    }
+
+    const projekt = { Id: neueId(), Name: n, Bereich: b };
+    this._daten.Projekte.push(projekt);
+    this.speichern();
+    return projekt;
+  },
+
+  // ---------------------------------------------------------------
+  // Import / Export (weiterhin nützlich als Backup bzw. zum Übertragen
+  // aus/in die MAUI-App)
+  // ---------------------------------------------------------------
+
+  exportJson() {
+    this._pruefeGeladen();
+    return JSON.stringify(this._daten, null, 2);
+  },
+
+  importJson(jsonText) {
+    this._pruefeGeladen();
+    this._daten = normalisiereDaten(JSON.parse(jsonText));
+    this.speichern();
+  },
+};
+
+// ---------------------------------------------------------------
+// Gemeinsame Anzeige-Helfer (von mehreren Views genutzt)
+// ---------------------------------------------------------------
+
+const Anzeige = {
+  prioritaetBadgeClass(prioritaet) {
+    switch (prioritaet) {
+      case Prioritaet.P1Dringend: return "badge--p1";
+      case Prioritaet.P2Wichtig: return "badge--p2";
+      case Prioritaet.P4Spaeter: return "badge--p4";
+      default: return "badge--p3";
+    }
+  },
+
+  prioritaetText(prioritaet) {
+    switch (prioritaet) {
+      case Prioritaet.P1Dringend: return "P1";
+      case Prioritaet.P2Wichtig: return "P2";
+      case Prioritaet.P4Spaeter: return "P4";
+      default: return "P3";
+    }
+  },
+
+  statusSymbol(status) {
+    switch (status) {
+      case AufgabenStatus.InArbeit: return "⏱";
+      case AufgabenStatus.Erledigt: return "✓";
+      default: return "○";
+    }
+  },
+
+  statusDotClass(status) {
+    switch (status) {
+      case AufgabenStatus.InArbeit: return "status-dot--inarbeit";
+      case AufgabenStatus.Erledigt: return "status-dot--erledigt";
+      default: return "status-dot--offen";
+    }
+  },
+
+  faelligkeitText(isoDatum) {
+    if (!isoDatum) return "";
+    const [jahr, monat, tag] = isoDatum.split("-");
+    return `${tag}.${monat}.${jahr}`;
+  },
+
+  zeigeToast(nachricht, istFehler = false) {
+    const el = document.getElementById("toast");
+    if (!el) return;
+    el.textContent = nachricht;
+    el.classList.toggle("is-error", istFehler);
+    el.hidden = false;
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
+  },
+};

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Focus – Aufgabenverwaltung</title>
+<meta name="description" content="Persönliche Aufgabenverwaltung mit Dashboard, Bereichen und Projekten." />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===================== LADE-ANZEIGE ===================== -->
+<div id="loading-screen" class="fullscreen-center">
+  <p>Lädt…</p>
+</div>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login-screen" class="fullscreen-center" hidden>
+  <div class="login-card">
+    <div class="app-header__brand" style="justify-content: center; margin-bottom: 18px;">
+      <span class="app-header__logo">F</span>
+      <h1>Focus</h1>
+    </div>
+
+    <form id="login-form">
+      <div class="form-field">
+        <label for="login-email">E-Mail</label>
+        <input type="email" id="login-email" class="form-input" required autocomplete="email" />
+      </div>
+      <div class="form-field">
+        <label for="login-passwort">Passwort</label>
+        <input type="password" id="login-passwort" class="form-input" required autocomplete="current-password" minlength="6" />
+      </div>
+
+      <p id="login-error" class="login-error"></p>
+
+      <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%;">Anmelden</button>
+    </form>
+
+    <button type="button" id="login-modus-toggle" class="link-btn">Neu hier? Konto erstellen</button>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app-shell" hidden>
+
+  <header class="app-header">
+    <div class="app-header__brand">
+      <span class="app-header__logo">F</span>
+      <h1>Focus</h1>
+      <button id="logout-btn" class="icon-btn" style="margin-left: auto;" title="Abmelden">⏻</button>
+    </div>
+    <nav class="tabbar" id="tabbar">
+      <button class="tab-btn is-active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="aufgaben" disabled title="Kommt im nächsten Schritt">Aufgaben</button>
+      <button class="tab-btn" data-tab="bereiche" disabled title="Kommt später">Bereiche</button>
+      <button class="tab-btn" data-tab="einstellungen" disabled title="Kommt später">Einstellungen</button>
+    </nav>
+  </header>
+
+  <main id="app-main">
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <section id="view-dashboard" class="view is-active">
+
+      <div class="filter-row" id="dashboard-filter-row">
+        <div class="filter-group">
+          <span class="filter-group__label">Bereich</span>
+          <div class="chip-list" id="dashboard-bereich-filter"></div>
+        </div>
+        <div class="filter-group" id="dashboard-projekt-filter-group" hidden>
+          <span class="filter-group__label">Projekt</span>
+          <div class="chip-list" id="dashboard-projekt-filter"></div>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="dashboard-kpis"></div>
+
+      <div class="sektionen" id="dashboard-sektionen"></div>
+
+    </section>
+
+    <!-- ===================== AUFGABEN (folgt in Schritt 2) ===================== -->
+    <section id="view-aufgaben" class="view">
+      <p class="hinweis-box">Diese Ansicht kommt im nächsten Schritt.</p>
+    </section>
+
+    <!-- ===================== BEREICHE (folgt in Schritt 3) ===================== -->
+    <section id="view-bereiche" class="view">
+      <p class="hinweis-box">Diese Ansicht kommt später.</p>
+    </section>
+
+    <!-- ===================== EINSTELLUNGEN (folgt in Schritt 3) ===================== -->
+    <section id="view-einstellungen" class="view">
+      <p class="hinweis-box">Diese Ansicht kommt später.</p>
+    </section>
+
+  </main>
+
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<!-- Popup: Aufgaben-Details -->
+<div id="details-popup" class="popup-overlay" hidden>
+  <div class="popup">
+    <header class="popup__header">
+      <h2>Aufgabe</h2>
+      <button class="icon-btn" id="details-popup-close" aria-label="Schließen">✕</button>
+    </header>
+    <div class="popup__body" id="details-popup-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
