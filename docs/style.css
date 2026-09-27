@@ -511,3 +511,181 @@ select.form-input {
   min-height: 18px;
   margin: 4px 0 10px;
 }
+
+/* ---------- Karten / Formulare (Aufgabenliste etc.) ---------- */
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+.aufgabe-form textarea.form-input {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row .form-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-group--grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-input--auto {
+  width: auto;
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background: var(--color-p1-bg);
+  color: var(--color-p1);
+  border: 1px solid var(--color-p1);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-icon {
+  border: none;
+  background: none;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.btn-icon:hover {
+  background: var(--color-p3-bg);
+}
+
+/* ---------- Bulk-Leiste & Listenkopf ---------- */
+
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.liste-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* ---------- Aufgabenliste-Zeilen ---------- */
+
+.liste-item {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.liste-item__main {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.liste-item__aktionen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.status-select {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* ---------- Checkliste (im Bearbeiten-Popup) ---------- */
+
+.checkliste-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.checkliste-item span {
+  flex: 1;
+  font-size: 13px;
+}
+
+.checkliste-item span.is-erledigt {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.checkliste-add-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.checkliste-add-row .form-input {
+  flex: 1;
+}
+
+.popup-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}

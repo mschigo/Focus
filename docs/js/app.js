@@ -11,6 +11,7 @@ const App = {
       if (eingeloggt) {
         this._zeigeAppShell();
         Dashboard.init();
+        Aufgabenliste.init();
       } else {
         this._zeigeLoginScreen();
       }
@@ -99,32 +100,9 @@ const App = {
     document.querySelectorAll(".view").forEach((view) => view.classList.toggle("is-active", view.id === `view-${tab}`));
   },
 
-  /** Zeigt eine einfache, lesbare Detailansicht. Bearbeiten folgt in Schritt 2. */
+  /** Öffnet das Bearbeiten-Popup (Dashboard und Aufgabenliste nutzen dasselbe Popup). */
   oeffneDetails(aufgabeId) {
-    const aufgabe = Store.getAufgaben().find((a) => a.Id === aufgabeId);
-    if (!aufgabe) return;
-
-    const body = document.getElementById("details-popup-body");
-    body.innerHTML = `
-      <p><strong>${escapeHtml(aufgabe.Titel)}</strong></p>
-      <p style="color: var(--color-text-muted); font-size: 13px;">
-        ${escapeHtml(aufgabe.Bereich || "–")}${aufgabe.ProjektName ? " · " + escapeHtml(aufgabe.ProjektName) : ""}
-      </p>
-      <p>
-        <span class="badge ${Anzeige.prioritaetBadgeClass(aufgabe.Prioritaet)}">${Anzeige.prioritaetText(aufgabe.Prioritaet)}</span>
-        &nbsp;
-        <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}">${Anzeige.statusSymbol(aufgabe.Status)}</span>
-        ${aufgabe.Status}
-      </p>
-      ${aufgabe.Faelligkeit ? `<p>Fällig am: ${Anzeige.faelligkeitText(aufgabe.Faelligkeit)}</p>` : ""}
-      ${aufgabe.Notizen ? `<p>${escapeHtml(aufgabe.Notizen)}</p>` : ""}
-      ${aufgabe.Link ? `<p><a href="${escapeHtml(aufgabe.Link)}" target="_blank" rel="noopener">${escapeHtml(aufgabe.Link)}</a></p>` : ""}
-      <p style="color: var(--color-text-muted); font-size: 12px; margin-top: 16px;">
-        Bearbeiten, Status ändern und Checkliste folgen in Schritt 2 (Aufgabenliste).
-      </p>
-    `;
-
-    document.getElementById("details-popup").hidden = false;
+    Aufgabenliste.oeffneBearbeitenPopup(aufgabeId);
   },
 
   schliesseDetails() {
