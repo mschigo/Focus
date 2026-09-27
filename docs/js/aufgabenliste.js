@@ -34,8 +34,6 @@ const Aufgabenliste = {
     const projektSelect = document.getElementById("neu-projekt");
     const faelligkeitInput = document.getElementById("neu-faelligkeit");
 
-    faelligkeitInput.value = heuteIso();
-
     bereichSelect.addEventListener("change", () => this._ladeProjektOptionen(bereichSelect.value, projektSelect));
 
     document.getElementById("neue-aufgabe-form").addEventListener("submit", (e) => {
@@ -70,7 +68,7 @@ const Aufgabenliste = {
         Anzeige.zeigeToast("Aufgabe erstellt!");
         document.getElementById("neu-titel").value = "";
         document.getElementById("neu-notizen").value = "";
-        faelligkeitInput.value = heuteIso();
+        faelligkeitInput.value = "";
       } catch (err) {
         Anzeige.zeigeToast(err.message, true);
       }
