@@ -748,3 +748,9 @@ select.form-input {
 .fab:hover {
   background: var(--color-primary-dark);
 }
+
+.sektionen-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}

@@ -4,6 +4,8 @@
  * gruppierte Top-Listen, Bereichs-/Projektfilter, ein-/ausklappbare Sektionen.
  */
 
+const ALLE_SEKTION_KEYS = ["Ueberfaellig", "P1", "P2", "P3", "Heute", "DieseWoche", "Erledigt"];
+
 const Dashboard = {
   ausgewaehlterBereich: "Alle",
   ausgewaehltesProjekt: "Alle",
@@ -11,6 +13,20 @@ const Dashboard = {
 
   init() {
     document.addEventListener("focus:datenGeaendert", () => this.render());
+    document.getElementById("dashboard-toggle-alle-btn").addEventListener("click", () => this.toggleAlleSektionen());
+    this.render();
+  },
+
+  /** Klappt alle Sektionen auf, wenn mindestens eine eingeklappt ist – sonst alle zu. */
+  toggleAlleSektionen() {
+    const alleOffen = this.eingeklappt.size === 0;
+
+    if (alleOffen) {
+      for (const key of ALLE_SEKTION_KEYS) this.eingeklappt.add(key);
+    } else {
+      this.eingeklappt.clear();
+    }
+
     this.render();
   },
 
@@ -178,6 +194,9 @@ const Dashboard = {
   _renderSektionen(sektionen) {
     const container = document.getElementById("dashboard-sektionen");
     container.innerHTML = "";
+
+    document.getElementById("dashboard-toggle-alle-btn").textContent =
+      this.eingeklappt.size === 0 ? "Alle einklappen" : "Alle aufklappen";
 
     for (const sektion of sektionen) {
       const istEingeklappt = this.eingeklappt.has(sektion.key);
