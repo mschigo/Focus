@@ -1,39 +1,34 @@
 /**
- * Focus Web – Aufgabenliste.
- * Entspricht ViewModels/AufgabenlisteViewModel.cs + AufgabenDetailsViewModel.cs:
- * Filter, Anlegen-Formular, Liste mit Mehrfachauswahl/Bulk-Aktionen, sowie das
- * Bearbeiten-Popup (auch vom Dashboard aus genutzt).
+ * Focus Web – Aufgaben anlegen & bearbeiten.
+ * Enthält das "Neue Aufgabe"-Popup (ausgelöst über den +-Button auf dem
+ * Dashboard) und das Bearbeiten-Popup (ausgelöst durch Klick auf eine
+ * Aufgabe im Dashboard). Entspricht ViewModels/AufgabeEingebenViewModel.cs
+ * und AufgabenDetailsViewModel.cs.
  */
 
 const Aufgabenliste = {
-  filterBereich: "Alle",
-  filterStatus: "Alle",
-  filterFaelligkeit: "Alle",
-  filterText: "",
-  ausgewaehlt: new Set(),
-  _sucheTimer: null,
-  _bearbeiteId: null,
   _checklisteEntwurf: [],
 
   init() {
-    document.addEventListener("focus:datenGeaendert", () => this.render());
-
-    this._wireNeueAufgabeForm();
-    this._wireFilter();
-    this._wireBulkLeiste();
-
-    this.render();
+    this._wireNeueAufgabePopup();
+    this._wireDetailsPopupSchliessen();
   },
 
   // ---------------------------------------------------------------
-  // Neue Aufgabe
+  // Neue Aufgabe (Popup über +-Button auf dem Dashboard)
   // ---------------------------------------------------------------
 
-  _wireNeueAufgabeForm() {
+  _wireNeueAufgabePopup() {
+    document.getElementById("dashboard-fab-neue-aufgabe").addEventListener("click", () => this.oeffneNeueAufgabePopup());
+
+    document.getElementById("neue-aufgabe-popup-close").addEventListener("click", () => this.schliesseNeueAufgabePopup());
+    document.getElementById("neue-aufgabe-abbrechen-btn").addEventListener("click", () => this.schliesseNeueAufgabePopup());
+    document.getElementById("neue-aufgabe-popup").addEventListener("click", (e) => {
+      if (e.target.id === "neue-aufgabe-popup") this.schliesseNeueAufgabePopup();
+    });
+
     const bereichSelect = document.getElementById("neu-bereich");
     const projektSelect = document.getElementById("neu-projekt");
-    const faelligkeitInput = document.getElementById("neu-faelligkeit");
-
     bereichSelect.addEventListener("change", () => this._ladeProjektOptionen(bereichSelect.value, projektSelect));
 
     document.getElementById("neue-aufgabe-form").addEventListener("submit", (e) => {
@@ -59,22 +54,32 @@ const Aufgabenliste = {
           ProjektId: projektId,
           Prioritaet: document.getElementById("neu-prioritaet").value,
           Status: AufgabenStatus.Offen,
-          Faelligkeit: faelligkeitInput.value || null,
+          Faelligkeit: document.getElementById("neu-faelligkeit").value || null,
           Notizen: document.getElementById("neu-notizen").value.trim(),
           Link: "",
           Checkliste: [],
         });
 
         Anzeige.zeigeToast("Aufgabe erstellt!");
-        document.getElementById("neu-titel").value = "";
-        document.getElementById("neu-notizen").value = "";
-        faelligkeitInput.value = "";
+        this.schliesseNeueAufgabePopup();
       } catch (err) {
         Anzeige.zeigeToast(err.message, true);
       }
     });
+  },
 
+  oeffneNeueAufgabePopup() {
+    document.getElementById("neu-titel").value = "";
+    document.getElementById("neu-notizen").value = "";
+    document.getElementById("neu-faelligkeit").value = "";
+    document.getElementById("neu-prioritaet").value = Prioritaet.P3Normal;
     this._ladeFormBereichOptionen();
+    document.getElementById("neue-aufgabe-popup").hidden = false;
+    document.getElementById("neu-titel").focus();
+  },
+
+  schliesseNeueAufgabePopup() {
+    document.getElementById("neue-aufgabe-popup").hidden = true;
   },
 
   _ladeFormBereichOptionen() {
@@ -85,6 +90,8 @@ const Aufgabenliste = {
 
     if (bereiche.length > 0) {
       this._ladeProjektOptionen(bereichSelect.value, document.getElementById("neu-projekt"));
+    } else {
+      document.getElementById("neu-projekt").innerHTML = "";
     }
   },
 
@@ -94,214 +101,8 @@ const Aufgabenliste = {
   },
 
   // ---------------------------------------------------------------
-  // Filter
+  // Aktionen ohne eigenes Popup
   // ---------------------------------------------------------------
-
-  _wireFilter() {
-    document.getElementById("aufgabenliste-suche").addEventListener("input", (e) => {
-      clearTimeout(this._sucheTimer);
-      const value = e.target.value;
-      this._sucheTimer = setTimeout(() => {
-        this.filterText = value;
-        this.render();
-      }, 300);
-    });
-  },
-
-  _setBereichFilter(value) {
-    this.filterBereich = value;
-    this.render();
-  },
-
-  _setStatusFilter(value) {
-    this.filterStatus = value;
-    this.render();
-  },
-
-  _setFaelligkeitFilter(value) {
-    this.filterFaelligkeit = value;
-    this.render();
-  },
-
-  _renderFilterChips(bereiche) {
-    this._renderChipGroup("aufgabenliste-bereich-filter", ["Alle", ...bereiche], this.filterBereich, (v) => this._setBereichFilter(v));
-    this._renderChipGroup("aufgabenliste-status-filter", ["Alle", "Offen", "InArbeit", "Erledigt"], this.filterStatus, (v) => this._setStatusFilter(v), {
-      Alle: "Alle", Offen: "Offen", InArbeit: "In Arbeit", Erledigt: "Erledigt",
-    });
-    this._renderChipGroup("aufgabenliste-faelligkeit-filter", ["Alle", "Heute", "Diese Woche", "Überfällig"], this.filterFaelligkeit, (v) => this._setFaelligkeitFilter(v));
-  },
-
-  _renderChipGroup(containerId, optionen, aktiv, onClick, labels = null) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = "";
-    for (const option of optionen) {
-      const btn = document.createElement("button");
-      btn.className = "chip" + (option === aktiv ? " is-selected" : "");
-      btn.textContent = labels ? labels[option] : option;
-      btn.addEventListener("click", () => onClick(option));
-      container.appendChild(btn);
-    }
-  },
-
-  _gefiltertUndSortiert(aufgaben) {
-    let query = aufgaben;
-
-    if (this.filterBereich !== "Alle") {
-      query = query.filter((a) => (a.Bereich || "").toLowerCase() === this.filterBereich.toLowerCase());
-    }
-
-    if (this.filterText.trim()) {
-      const t = this.filterText.trim().toLowerCase();
-      query = query.filter((a) => a.Titel.toLowerCase().includes(t) || (a.ProjektName || "").toLowerCase().includes(t));
-    }
-
-    if (this.filterStatus !== "Alle") {
-      query = query.filter((a) => a.Status === this.filterStatus);
-    }
-
-    const heute = heuteIso();
-    const wochenEnde = wochenEndeIso(heute);
-
-    query = query.filter((a) => {
-      switch (this.filterFaelligkeit) {
-        case "Heute": return a.Faelligkeit === heute;
-        case "Diese Woche": return a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde;
-        case "Überfällig": return a.Faelligkeit && a.Faelligkeit < heute;
-        default: return true;
-      }
-    });
-
-    return [...query].sort((a, b) => {
-      const prioA = PRIORITAET_REIHENFOLGE.indexOf(a.Prioritaet);
-      const prioB = PRIORITAET_REIHENFOLGE.indexOf(b.Prioritaet);
-      if (prioA !== prioB) return prioA - prioB;
-
-      const faelA = a.Faelligkeit || "9999-12-31";
-      const faelB = b.Faelligkeit || "9999-12-31";
-      if (faelA !== faelB) return faelA.localeCompare(faelB);
-
-      return (b.GeaendertAm || "").localeCompare(a.GeaendertAm || "");
-    });
-  },
-
-  // ---------------------------------------------------------------
-  // Rendern der Liste
-  // ---------------------------------------------------------------
-
-  render() {
-    if (!Store._daten) return; // Noch nicht eingeloggt/geladen.
-
-    const bereiche = Store.getBereiche();
-    this._renderFilterChips(bereiche);
-
-    if (document.getElementById("neu-bereich").options.length === 0 && bereiche.length > 0) {
-      this._ladeFormBereichOptionen();
-    }
-
-    const alle = Store.getAufgaben();
-    const gefiltert = this._gefiltertUndSortiert(alle);
-
-    // Auswahl bereinigen (Einträge, die durch den Filter verschwunden sind, verlieren die Auswahl nicht,
-    // Einträge, die gelöscht wurden, schon).
-    const alleIds = new Set(alle.map((a) => a.Id));
-    for (const id of this.ausgewaehlt) {
-      if (!alleIds.has(id)) this.ausgewaehlt.delete(id);
-    }
-
-    document.getElementById("aufgabenliste-anzahl").textContent = `${gefiltert.length} Aufgabe(n)`;
-
-    const alleAuswaehlenCheckbox = document.getElementById("aufgabenliste-alle-auswaehlen");
-    alleAuswaehlenCheckbox.checked = gefiltert.length > 0 && gefiltert.every((a) => this.ausgewaehlt.has(a.Id));
-    alleAuswaehlenCheckbox.onchange = () => {
-      for (const a of gefiltert) {
-        if (alleAuswaehlenCheckbox.checked) this.ausgewaehlt.add(a.Id);
-        else this.ausgewaehlt.delete(a.Id);
-      }
-      this.render();
-    };
-
-    const container = document.getElementById("aufgabenliste-items");
-    container.innerHTML = "";
-
-    if (gefiltert.length === 0) {
-      container.innerHTML = `<p class="hinweis-box">Keine Aufgaben gefunden.</p>`;
-    } else {
-      for (const aufgabe of gefiltert) {
-        container.appendChild(this._renderItem(aufgabe));
-      }
-    }
-
-    this._renderBulkLeiste();
-  },
-
-  _renderItem(aufgabe) {
-    const row = document.createElement("div");
-    row.className = "liste-item";
-
-    const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich);
-    if (bereichFarbe) row.style.borderLeftColor = bereichFarbe;
-
-    const heute = heuteIso();
-    const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.IstAktiv;
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = this.ausgewaehlt.has(aufgabe.Id);
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) this.ausgewaehlt.add(aufgabe.Id);
-      else this.ausgewaehlt.delete(aufgabe.Id);
-      this._renderBulkLeiste();
-      document.getElementById("aufgabenliste-alle-auswaehlen").checked = false;
-    });
-    row.appendChild(checkbox);
-
-    const main = document.createElement("div");
-    main.className = "liste-item__main";
-    main.addEventListener("click", () => this.oeffneBearbeitenPopup(aufgabe.Id));
-    main.innerHTML = `
-      <span class="badge ${Anzeige.prioritaetBadgeClass(aufgabe.Prioritaet)}">${Anzeige.prioritaetText(aufgabe.Prioritaet)}</span>
-      <span class="aufgabe-row__titel ${aufgabe.Status === AufgabenStatus.Erledigt ? "is-erledigt" : ""}" style="display:inline;">${escapeHtml(aufgabe.Titel)}</span>
-      <div class="aufgabe-row__meta">
-        ${escapeHtml(aufgabe.Bereich || "")}${aufgabe.ProjektName ? " · " + escapeHtml(aufgabe.ProjektName) : ""}
-        ${aufgabe.Faelligkeit ? ` · <span class="${istUeberfaellig ? "is-ueberfaellig" : ""}">${Anzeige.faelligkeitText(aufgabe.Faelligkeit)}</span>` : ""}
-      </div>
-    `;
-    row.appendChild(main);
-
-    const aktionen = document.createElement("div");
-    aktionen.className = "liste-item__aktionen";
-
-    const statusSelect = document.createElement("select");
-    statusSelect.className = "status-select";
-    statusSelect.innerHTML = `
-      <option value="Offen" ${aufgabe.Status === "Offen" ? "selected" : ""}>Offen</option>
-      <option value="InArbeit" ${aufgabe.Status === "InArbeit" ? "selected" : ""}>In Arbeit</option>
-      <option value="Erledigt" ${aufgabe.Status === "Erledigt" ? "selected" : ""}>Erledigt</option>
-    `;
-    statusSelect.addEventListener("change", () => {
-      Store.setAufgabenStatus(aufgabe.Id, statusSelect.value);
-      Anzeige.zeigeToast("Status aktualisiert.");
-    });
-    aktionen.appendChild(statusSelect);
-
-    const duplizierenBtn = document.createElement("button");
-    duplizierenBtn.className = "btn-icon";
-    duplizierenBtn.title = "Duplizieren";
-    duplizierenBtn.textContent = "⧉";
-    duplizierenBtn.addEventListener("click", () => this._duplizieren(aufgabe));
-    aktionen.appendChild(duplizierenBtn);
-
-    const loeschenBtn = document.createElement("button");
-    loeschenBtn.className = "btn-icon";
-    loeschenBtn.title = "Löschen";
-    loeschenBtn.textContent = "🗑";
-    loeschenBtn.addEventListener("click", () => this._loeschenMitBestaetigung([aufgabe.Id], aufgabe.Titel));
-    aktionen.appendChild(loeschenBtn);
-
-    row.appendChild(aktionen);
-
-    return row;
-  },
 
   _duplizieren(aufgabe) {
     Store.addOrUpdateAufgabe({
@@ -318,61 +119,19 @@ const Aufgabenliste = {
     Anzeige.zeigeToast("Aufgabe dupliziert.");
   },
 
-  _loeschenMitBestaetigung(ids, titel) {
-    const nachricht = ids.length === 1
-      ? `Aufgabe "${titel}" wirklich endgültig löschen?`
-      : `${ids.length} Aufgabe(n) wirklich endgültig löschen?`;
+  // ---------------------------------------------------------------
+  // Bearbeiten-Popup (vom Dashboard aus genutzt, App.oeffneDetails)
+  // ---------------------------------------------------------------
 
-    if (!window.confirm(nachricht)) return;
-
-    for (const id of ids) {
-      Store.endgueltigLoeschen(id);
-      this.ausgewaehlt.delete(id);
-    }
-
-    Anzeige.zeigeToast(ids.length === 1 ? "Aufgabe gelöscht." : "Ausgewählte Aufgaben gelöscht.");
+  _wireDetailsPopupSchliessen() {
+    // Schließen-Button/Overlay-Klick werden bereits in app.js verdrahtet
+    // (App.schliesseDetails). Hier ist nichts weiter nötig.
   },
-
-  // ---------------------------------------------------------------
-  // Bulk-Leiste
-  // ---------------------------------------------------------------
-
-  _wireBulkLeiste() {
-    document.getElementById("aufgabenliste-bulk-status-btn").addEventListener("click", () => {
-      const status = document.getElementById("aufgabenliste-bulk-status").value;
-      for (const id of this.ausgewaehlt) {
-        Store.setAufgabenStatus(id, status);
-      }
-      Anzeige.zeigeToast("Status für ausgewählte Aufgaben geändert.");
-      this.ausgewaehlt.clear();
-      this.render();
-    });
-
-    document.getElementById("aufgabenliste-bulk-loeschen-btn").addEventListener("click", () => {
-      this._loeschenMitBestaetigung([...this.ausgewaehlt]);
-      this.render();
-    });
-  },
-
-  _renderBulkLeiste() {
-    const bar = document.getElementById("aufgabenliste-bulk-bar");
-    const anzahl = this.ausgewaehlt.size;
-
-    bar.hidden = anzahl === 0;
-    if (anzahl > 0) {
-      document.getElementById("aufgabenliste-bulk-anzahl").textContent = `${anzahl} ausgewählt`;
-    }
-  },
-
-  // ---------------------------------------------------------------
-  // Bearbeiten-Popup (auch vom Dashboard aus genutzt)
-  // ---------------------------------------------------------------
 
   oeffneBearbeitenPopup(aufgabeId) {
     const aufgabe = Store.getAufgaben().find((a) => a.Id === aufgabeId);
     if (!aufgabe) return;
 
-    this._bearbeiteId = aufgabe.Id;
     this._checklisteEntwurf = (aufgabe.Checkliste || []).map((c) => ({ ...c }));
 
     document.querySelector("#details-popup .popup__header h2").textContent = "Aufgabe bearbeiten";
@@ -441,6 +200,7 @@ const Aufgabenliste = {
 
       <div class="popup-footer">
         <button type="button" id="edit-speichern-btn" class="btn-primary">Speichern</button>
+        <button type="button" id="edit-duplizieren-btn" class="btn-secondary">Duplizieren</button>
         <button type="button" id="edit-abbrechen-btn" class="btn-secondary">Abbrechen</button>
         <button type="button" id="edit-loeschen-btn" class="btn-danger">Löschen</button>
       </div>
@@ -470,6 +230,12 @@ const Aufgabenliste = {
 
     document.getElementById("edit-speichern-btn").addEventListener("click", () => this._speichern(aufgabe.Id));
     document.getElementById("edit-abbrechen-btn").addEventListener("click", () => App.schliesseDetails());
+
+    document.getElementById("edit-duplizieren-btn").addEventListener("click", () => {
+      this._duplizieren(aufgabe);
+      App.schliesseDetails();
+    });
+
     document.getElementById("edit-loeschen-btn").addEventListener("click", () => {
       if (!window.confirm(`Aufgabe "${aufgabe.Titel}" wirklich endgültig löschen?`)) return;
       Store.endgueltigLoeschen(aufgabe.Id);

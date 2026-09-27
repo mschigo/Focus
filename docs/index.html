@@ -52,8 +52,6 @@
     </div>
     <nav class="tabbar" id="tabbar">
       <button class="tab-btn is-active" data-tab="dashboard">Dashboard</button>
-      <button class="tab-btn" data-tab="aufgaben">Aufgaben</button>
-      <button class="tab-btn" data-tab="bereiche">Bereiche</button>
       <button class="tab-btn" data-tab="einstellungen">Einstellungen</button>
     </nav>
   </header>
@@ -78,101 +76,8 @@
 
       <div class="sektionen" id="dashboard-sektionen"></div>
 
-    </section>
+      <button type="button" id="dashboard-fab-neue-aufgabe" class="fab" aria-label="Neue Aufgabe" title="Neue Aufgabe">+</button>
 
-    <!-- ===================== AUFGABEN ===================== -->
-    <section id="view-aufgaben" class="view">
-
-      <div class="card">
-        <h2 class="card-title">Neue Aufgabe</h2>
-        <form id="neue-aufgabe-form" class="aufgabe-form">
-          <div class="form-field">
-            <label for="neu-titel">Titel</label>
-            <input type="text" id="neu-titel" class="form-input" required />
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label for="neu-bereich">Bereich</label>
-              <select id="neu-bereich" class="form-input"></select>
-            </div>
-            <div class="form-field">
-              <label for="neu-projekt">Projekt</label>
-              <select id="neu-projekt" class="form-input"></select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label for="neu-prioritaet">Priorität</label>
-              <select id="neu-prioritaet" class="form-input">
-                <option value="P1Dringend">P1 – Dringend</option>
-                <option value="P2Wichtig">P2 – Wichtig</option>
-                <option value="P3Normal" selected>P3 – Normal</option>
-                <option value="P4Spaeter">P4 – Später</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label for="neu-faelligkeit">Fälligkeit (optional)</label>
-              <input type="date" id="neu-faelligkeit" class="form-input" />
-            </div>
-          </div>
-          <div class="form-field">
-            <label for="neu-notizen">Notizen (optional)</label>
-            <textarea id="neu-notizen" class="form-input" rows="2"></textarea>
-          </div>
-          <button type="submit" class="btn-primary">Aufgabe hinzufügen</button>
-        </form>
-      </div>
-
-      <div class="filter-row" id="aufgabenliste-filter-row">
-        <div class="filter-group">
-          <span class="filter-group__label">Bereich</span>
-          <div class="chip-list" id="aufgabenliste-bereich-filter"></div>
-        </div>
-        <div class="filter-group">
-          <span class="filter-group__label">Status</span>
-          <div class="chip-list" id="aufgabenliste-status-filter"></div>
-        </div>
-        <div class="filter-group">
-          <span class="filter-group__label">Fälligkeit</span>
-          <div class="chip-list" id="aufgabenliste-faelligkeit-filter"></div>
-        </div>
-        <div class="filter-group filter-group--grow">
-          <span class="filter-group__label">Suche</span>
-          <input type="text" id="aufgabenliste-suche" class="form-input" placeholder="Titel oder Projekt…" />
-        </div>
-      </div>
-
-      <div class="bulk-bar" id="aufgabenliste-bulk-bar" hidden>
-        <span id="aufgabenliste-bulk-anzahl"></span>
-        <select id="aufgabenliste-bulk-status" class="form-input form-input--auto">
-          <option value="Offen">Offen</option>
-          <option value="InArbeit">In Arbeit</option>
-          <option value="Erledigt">Erledigt</option>
-        </select>
-        <button type="button" id="aufgabenliste-bulk-status-btn" class="btn-secondary">Status setzen</button>
-        <button type="button" id="aufgabenliste-bulk-loeschen-btn" class="btn-danger">Löschen</button>
-      </div>
-
-      <div class="liste-header">
-        <label class="checkbox-label">
-          <input type="checkbox" id="aufgabenliste-alle-auswaehlen" /> Alle auswählen
-        </label>
-        <span id="aufgabenliste-anzahl" class="liste-header__anzahl"></span>
-      </div>
-
-      <div id="aufgabenliste-items"></div>
-
-    </section>
-
-    <!-- ===================== BEREICHE ===================== -->
-    <section id="view-bereiche" class="view">
-      <div class="filter-row">
-        <div class="filter-group">
-          <span class="filter-group__label">Bereich</span>
-          <div class="chip-list" id="bereichsansicht-bereich-filter"></div>
-        </div>
-      </div>
-      <div class="sektionen" id="bereichsansicht-gruppen"></div>
     </section>
 
     <!-- ===================== EINSTELLUNGEN ===================== -->
@@ -269,7 +174,7 @@
 
 <div id="toast" class="toast" hidden></div>
 
-<!-- Popup: Aufgaben-Details -->
+<!-- Popup: Aufgaben-Details (Bearbeiten) -->
 <div id="details-popup" class="popup-overlay" hidden>
   <div class="popup">
     <header class="popup__header">
@@ -280,12 +185,62 @@
   </div>
 </div>
 
+<!-- Popup: Neue Aufgabe (ausgelöst über den +-Button auf dem Dashboard) -->
+<div id="neue-aufgabe-popup" class="popup-overlay" hidden>
+  <div class="popup">
+    <header class="popup__header">
+      <h2>Neue Aufgabe</h2>
+      <button class="icon-btn" id="neue-aufgabe-popup-close" aria-label="Schließen">✕</button>
+    </header>
+    <div class="popup__body">
+      <form id="neue-aufgabe-form" class="aufgabe-form">
+        <div class="form-field">
+          <label for="neu-titel">Titel</label>
+          <input type="text" id="neu-titel" class="form-input" required />
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="neu-bereich">Bereich</label>
+            <select id="neu-bereich" class="form-input"></select>
+          </div>
+          <div class="form-field">
+            <label for="neu-projekt">Projekt</label>
+            <select id="neu-projekt" class="form-input"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="neu-prioritaet">Priorität</label>
+            <select id="neu-prioritaet" class="form-input">
+              <option value="P1Dringend">P1 – Dringend</option>
+              <option value="P2Wichtig">P2 – Wichtig</option>
+              <option value="P3Normal" selected>P3 – Normal</option>
+              <option value="P4Spaeter">P4 – Später</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="neu-faelligkeit">Fälligkeit (optional)</label>
+            <input type="date" id="neu-faelligkeit" class="form-input" />
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="neu-notizen">Notizen (optional)</label>
+          <textarea id="neu-notizen" class="form-input" rows="2"></textarea>
+        </div>
+        <div class="popup-footer">
+          <button type="submit" class="btn-primary">Aufgabe hinzufügen</button>
+          <button type="button" id="neue-aufgabe-abbrechen-btn" class="btn-secondary">Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/store.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/aufgabenliste.js"></script>
-<script src="js/bereichsansicht.js"></script>
 <script src="js/einstellungen.js"></script>
 <script src="js/app.js"></script>
 </body>
