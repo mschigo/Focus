@@ -503,6 +503,29 @@ const LokaleEinstellungen = {
     this._speichern();
   },
 
+  renameBereichFarbe(altName, neuName) {
+    if (!altName || !altName.trim() || !neuName || !neuName.trim()) return;
+    const d = this._laden();
+    const altKey = altName.trim();
+    const neuKey = neuName.trim();
+    if (altKey === neuKey) return;
+    if (Object.prototype.hasOwnProperty.call(d.bereichFarben, altKey)) {
+      d.bereichFarben[neuKey] = d.bereichFarben[altKey];
+      delete d.bereichFarben[altKey];
+      this._speichern();
+    }
+  },
+
+  removeBereichFarbe(bereichName) {
+    if (!bereichName || !bereichName.trim()) return;
+    const d = this._laden();
+    const key = bereichName.trim();
+    if (Object.prototype.hasOwnProperty.call(d.bereichFarben, key)) {
+      delete d.bereichFarben[key];
+      this._speichern();
+    }
+  },
+
   getDarkMode() {
     return this._laden().darkMode ?? null;
   },
