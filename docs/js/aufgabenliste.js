@@ -75,7 +75,11 @@ const Aufgabenliste = {
             </select>
           </div>
           <div class="form-field">
-            <label for="edit-faelligkeit">Fälligkeit</label>
+            <label for="edit-startdatum">Startdatum (optional)</label>
+            <input type="date" id="edit-startdatum" class="form-input" lang="de-CH" value="${aufgabe.Startdatum || ""}" />
+          </div>
+          <div class="form-field">
+            <label for="edit-faelligkeit">Fälligkeit (optional)</label>
             <input type="date" id="edit-faelligkeit" class="form-input" lang="de-CH" value="${aufgabe.Faelligkeit || ""}" />
           </div>
         </div>
@@ -246,7 +250,8 @@ const Aufgabenliste = {
       ProjektId: aufgabe.ProjektId,
       Prioritaet: aufgabe.Prioritaet,
       Status: AufgabenStatus.Offen,
-      Faelligkeit: aufgabe.Faelligkeit,
+      Startdatum: aufgabe.Startdatum || null,
+      Faelligkeit: aufgabe.Faelligkeit || null,
       Notizen: aufgabe.Notizen,
       Link: aufgabe.Link,
       SollZeit: aufgabe.SollZeit || 0,
@@ -283,6 +288,7 @@ const Aufgabenliste = {
         ProjektId: projektId,
         Prioritaet: prioritaet,
         Status: document.getElementById("edit-status")?.value || AufgabenStatus.Offen,
+        Startdatum: document.getElementById("edit-startdatum")?.value || null,
         Faelligkeit: document.getElementById("edit-faelligkeit")?.value || null,
         SollZeit: parseFloat(document.getElementById("edit-sollzeit")?.value) || 0,
         IstZeit: parseFloat(document.getElementById("edit-istzeit")?.value) || 0,
