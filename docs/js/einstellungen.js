@@ -10,14 +10,21 @@ const Einstellungen = {
   ausgewaehlteFarbe: "",
 
   FARB_OPTIONEN: [
-    { name: "Standard", hex: "" },
-    { name: "Blau", hex: "#0066FF" },
-    { name: "Grün", hex: "#00E676" },
-    { name: "Orange", hex: "#FF9100" },
-    { name: "Mangenta Pink", hex: "#E91E63" },
-    { name: "Rot", hex: "#FF1744" },
-    { name: "Türkis", hex: "#E0F7FA" },
-    { name: "Grau", hex: "#00E5FF" },
+   { name: "Standard", hex: "" },
+  { name: "Blau", hex: "#0066FF" },
+  { name: "Grün", hex: "#00E676" },
+  { name: "Orange", hex: "#FF9100" },
+  { name: "Magenta Pink", hex: "#E91E63" },
+  { name: "Rot", hex: "#FF1744" },
+  { name: "Türkis", hex: "#00E5FF" },        /* Korrigiert: Kräftiges Türkis/Cyan */
+  { name: "Grau", hex: "#9E9E9E" },          /* Korrigiert: Deutliches, neutrales Grau */
+  
+  /* 5 neue Farbtöne zur Abdeckung des gesamten Spektrums: */
+  { name: "Gelb", hex: "#FFD600" },          /* Kräftiges Sonnengelb */
+  { name: "Violett", hex: "#AA00FF" },       /* Sattes Purpur/Violett */
+  { name: "Limette", hex: "#AEEA00" },       /* Leuchtendes Hellgrün/Gelbgrün */
+  { name: "Koralle", hex: "#FF3D00" },       /* Kräftiges Rot-Orange / Aperol */
+  { name: "Braun", hex: "#8D6E63" }          /* Warmer Erdton */
   ],
 
   init() {
