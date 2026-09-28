@@ -11,13 +11,13 @@ const Einstellungen = {
 
   FARB_OPTIONEN: [
     { name: "Standard", hex: "" },
-    { name: "Blau", hex: "#E3F2FD" },
-    { name: "Grün", hex: "#E8F5E9" },
-    { name: "Orange", hex: "#FFF3E0" },
-    { name: "Violett", hex: "#F3E5F5" },
-    { name: "Rot", hex: "#FFEBEE" },
+    { name: "Blau", hex: "#0066FF" },
+    { name: "Grün", hex: "#00E676" },
+    { name: "Orange", hex: "#FF9100" },
+    { name: "Mangenta Pink", hex: "#E91E63" },
+    { name: "Rot", hex: "#FF1744" },
     { name: "Türkis", hex: "#E0F7FA" },
-    { name: "Grau", hex: "#F5F5F5" },
+    { name: "Grau", hex: "#00E5FF" },
   ],
 
   init() {
