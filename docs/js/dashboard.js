@@ -1,12 +1,13 @@
 /**
  * Focus Web – Dashboard.
- * Flache Aufgabenliste mit Bereichs-, Projekt- und Dropdown-Filterung.
+ * Flache Aufgabenliste mit Bereichs-, Projekt-, Dropdown- und Such-Filterung.
  */
 
 const Dashboard = {
   ausgewaehlterBereich: "Alle",
   ausgewaehltesProjekt: "Alle",
   ausgewaehlterAnsichtsFilter: "Alle",
+  suchBegriff: "",
 
   init() {
     document.addEventListener("focus:datenGeaendert", () => this.render());
@@ -14,6 +15,14 @@ const Dashboard = {
     const ansichtSelect = document.getElementById("dashboard-ansicht-filter");
     if (ansichtSelect) {
       ansichtSelect.addEventListener("change", (e) => this.setAnsichtsFilter(e.target.value));
+    }
+
+    const suchInput = document.getElementById("dashboard-such-filter");
+    if (suchInput) {
+      suchInput.addEventListener("input", (e) => {
+        this.suchBegriff = e.target.value.trim().toLowerCase();
+        this.render();
+      });
     }
 
     this.render();
@@ -75,9 +84,19 @@ const Dashboard = {
         break;
       case "Alle":
       default:
-        // "Alle" zeigt standardmässig alle aktiven (offenen/in Arbeit) Aufgaben an
         query = query.filter((a) => a.IstAktiv);
         break;
+    }
+
+    // 3. Volltextsuche
+    if (this.suchBegriff) {
+      query = query.filter((a) => {
+        const titelMatch = (a.Titel || "").toLowerCase().includes(this.suchBegriff);
+        const notizMatch = (a.Notizen || "").toLowerCase().includes(this.suchBegriff);
+        const bereichMatch = (a.Bereich || "").toLowerCase().includes(this.suchBegriff);
+        const projektMatch = (a.ProjektName || "").toLowerCase().includes(this.suchBegriff);
+        return titelMatch || notizMatch || bereichMatch || projektMatch;
+      });
     }
 
     return query;
@@ -104,7 +123,6 @@ const Dashboard = {
 
     const offen = aufgaben.filter((a) => a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit);
 
-    // KPI-Übersichtskarten berechnen
     const heute = heuteIso();
     const wochenEnde = wochenEndeIso(heute);
     const kpis = {
@@ -117,7 +135,6 @@ const Dashboard = {
     };
     this._renderKpis(kpis);
 
-    // Filter auf alle Aufgaben anwenden
     const gefiltert = this._gefiltert(aufgaben);
     const sortiert = this._sortiereNachPrioUndFaelligkeit(gefiltert);
     this._renderAufgabenListe(sortiert);
@@ -212,7 +229,6 @@ const Dashboard = {
   _renderAufgabeRow(aufgabe) {
     const row = document.createElement("div");
     row.className = "aufgabe-row";
-    row.addEventListener("click", () => App.oeffneDetails(aufgabe.Id));
 
     const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich) || "#888888";
     row.style.borderLeftColor = bereichFarbe;
@@ -220,20 +236,19 @@ const Dashboard = {
     const heute = heuteIso();
     const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.Status !== AufgabenStatus.Erledigt;
 
-    // Checklisten-Fortschritt berechnen
     const checkliste = aufgabe.Checkliste || [];
     const anzahlGesamt = checkliste.length;
     let checklisteHtml = "";
 
     if (anzahlGesamt > 0) {
       const anzahlErledigt = checkliste.filter((p) => p.IstErledigt || p.Erledigt || p.erledigt).length;
-      checklisteHtml = ` <span class="badge" style="background: var(--color-p3-bg); color: var(--color-text-muted); font-weight: normal; margin-left: 6px;" title="Checkliste: ${anzahlErledigt} von ${anzahlGesamt} erledigt">☑ ${anzahlErledigt}/${anzahlGesamt}</span>`;
+      checklisteHtml = ` <span class="checkliste-progress-badge" title="Checkliste: ${anzahlErledigt} von ${anzahlGesamt} erledigt">☑ ${anzahlErledigt}/${anzahlGesamt}</span>`;
     }
 
     row.innerHTML = `
-      <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}">${Anzeige.statusSymbol(aufgabe.Status)}</span>
+      <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}" style="cursor: pointer; padding: 4px;" title="Status ändern">${Anzeige.statusSymbol(aufgabe.Status)}</span>
       <span class="badge ${Anzeige.prioritaetBadgeClass(aufgabe.Prioritaet)}">${Anzeige.prioritaetText(aufgabe.Prioritaet)}</span>
-      <div class="aufgabe-row__main">
+      <div class="aufgabe-row__main" style="cursor: pointer;">
         <div class="aufgabe-row__titel ${aufgabe.Status === AufgabenStatus.Erledigt ? "is-erledigt" : ""}">${escapeHtml(aufgabe.Titel)}</div>
         <div class="aufgabe-row__meta">
           <span class="bereich-farbe-dot" style="background:${bereichFarbe};"></span>
@@ -245,7 +260,29 @@ const Dashboard = {
       ${aufgabe.Faelligkeit ? `<span class="faellig-tag ${istUeberfaellig ? "is-ueberfaellig" : ""}">${Anzeige.faelligkeitText(aufgabe.Faelligkeit)}</span>` : ""}
     `;
 
+    // Click auf Zeilen-Inhalt öffnet Popup
+    row.querySelector(".aufgabe-row__main")?.addEventListener("click", () => App.oeffneDetails(aufgabe.Id));
+
+    // Inline-Klick auf den Status-Dot wechselt den Status zyklisch
+    row.querySelector(".status-dot")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._naechsterStatus(aufgabe);
+    });
+
     return row;
+  },
+
+  _naechsterStatus(aufgabe) {
+    let neuerStatus = AufgabenStatus.Offen;
+    if (aufgabe.Status === AufgabenStatus.Offen) {
+      neuerStatus = AufgabenStatus.InArbeit;
+    } else if (aufgabe.Status === AufgabenStatus.InArbeit) {
+      neuerStatus = AufgabenStatus.Erledigt;
+    } else {
+      neuerStatus = AufgabenStatus.Offen;
+    }
+
+    Store.setAufgabeStatus(aufgabe.Id, neuerStatus);
   },
 };
 
