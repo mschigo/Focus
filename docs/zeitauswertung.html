@@ -1,394 +1,316 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de-CH">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Focus Web – Zeiten-Auswertung</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focus – Zeitauswertung</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            primary: {
-              DEFAULT: '#1565C0',
-              dark: '#0D47A1'
-            },
-            surface: {
-              light: '#FFFFFF',
-              dark: '#1E1E1E'
-            },
-            bg: {
-              light: '#FAFAFA',
-              dark: '#121212'
-            },
-            border: {
-              light: '#E0E0E0',
-              dark: '#333333'
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body {
-      font-family: "Segoe UI", "Open Sans", system-ui, -apple-system, sans-serif;
-      transition: background-color 0.2s ease, color 0.2s ease;
-    }
-    .badge {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    .badge-p1 { color: #D32F2F; background: #FFEBEE; }
-    .badge-p2 { color: #F57C00; background: #FFF3E0; }
-    .badge-p3 { color: #666666; background: #F5F5F5; }
-    .dark .badge-p3 { color: #AAAAAA; background: #2A2A2A; }
-  </style>
 </head>
-<body class="bg-bg-light dark:bg-bg-dark text-slate-800 dark:text-slate-100 min-h-screen">
+<body>
 
-  <header class="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark sticky top-0 z-20 px-4 pt-3 pb-0">
-    <div class="max-w-6xl mx-auto flex items-center justify-between mb-2">
-      <div class="flex items-center gap-3">
-        <span class="w-8 h-8 rounded-lg bg-primary text-white font-bold flex items-center justify-center text-lg">F</span>
-        <h1 class="text-xl font-bold text-primary dark:text-blue-400">Focus – Zeiten-Auswertung</h1>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="theme-toggle" class="p-2 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-          🌙 Dark Mode
-        </button>
-      </div>
-    </div> 
+<div id="app-shell">
+  <header class="app-header">
+    <div class="app-header__brand">
+      <span class="app-header__logo">F</span>
+      <h1>Focus – Zeitauswertung</h1>
+    </div>
+    <nav class="tabbar" id="tabbar">
+      <a href="index.html" class="tab-btn" style="text-decoration: none;">← Zurück zum Dashboard</a>
+    </nav>
   </header>
 
-  <main class="max-w-6xl mx-auto p-4 space-y-6">
-
-    <div class="flex flex-wrap items-center justify-between gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-border-light dark:border-border-dark">
-      <div>
-        <h2 class="text-lg font-semibold">Zeiterfassungs-Analyse</h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Übersicht der Soll- vs. Ist-Aufwände Ihrer Aufgaben</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <label for="bereich-filter" class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Bereich:</label>
-        <select id="bereich-filter" class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-primary">
+  <main id="app-main" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+    
+    <!-- Filterleiste: Bereich & Projekt -->
+    <div class="filter-row" style="margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+      <div class="filter-group">
+        <label class="filter-group__label" for="filter-bereich">Bereich</label>
+        <select id="filter-bereich" class="form-input" style="min-width: 180px;">
           <option value="Alle">Alle Bereiche</option>
-          <option value="Arbeit">Arbeit</option>
-          <option value="Privat">Privat</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-group__label" for="filter-projekt">Projekt</label>
+        <select id="filter-projekt" class="form-input" style="min-width: 180px;">
+          <option value="Alle">Alle Projekte</option>
         </select>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Soll-Zeit (Geplant)</div>
-        <div id="kpi-soll" class="text-2xl font-bold mt-1 text-slate-800 dark:text-slate-100">0.0 h</div>
-        <div class="text-xs text-slate-400 mt-1">Aus gewählten Aufgaben</div>
+    <!-- KPI Übersicht -->
+    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="kpi-card">
+        <div class="kpi-card__value" id="kpi-soll">0.0h</div>
+        <div class="kpi-card__label">Gesamt Soll-Zeit</div>
       </div>
-
-      <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Ist-Zeit (Erfasst)</div>
-        <div id="kpi-ist" class="text-2xl font-bold mt-1 text-primary dark:text-blue-400">0.0 h</div>
-        <div class="text-xs text-slate-400 mt-1">Tatsächlicher Aufwand</div>
+      <div class="kpi-card">
+        <div class="kpi-card__value" id="kpi-ist">0.0h</div>
+        <div class="kpi-card__label">Gesamt Ist-Zeit</div>
       </div>
-
-      <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Abweichung</div>
-        <div id="kpi-diff" class="text-2xl font-bold mt-1 text-slate-800 dark:text-slate-100">0.0 h</div>
-        <div id="kpi-diff-pct" class="text-xs font-semibold mt-1 text-slate-500">0%</div>
+      <div class="kpi-card">
+        <div class="kpi-card__value" id="kpi-diff">0.0h</div>
+        <div class="kpi-card__label">Differenz (Ist - Soll)</div>
       </div>
-
-      <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Erfasste Aufgaben</div>
-        <div id="kpi-count" class="text-2xl font-bold mt-1 text-slate-800 dark:text-slate-100">0</div>
-        <div class="text-xs text-slate-400 mt-1">Mit Zeitangaben</div>
+      <div class="kpi-card">
+        <div class="kpi-card__value" id="kpi-anzahl">0</div>
+        <div class="kpi-card__label">Ausgewertete Aufgaben</div>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Chart Column -->
-      <div class="lg:col-span-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm flex flex-col justify-between">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Soll vs. Ist pro Projekt</h3>
-          <span class="text-xs text-slate-400">Stunden (h)</span>
-        </div>
-        <div class="relative w-full h-72">
-          <canvas id="projectChart"></canvas>
+    <!-- Diagramme -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 24px;">
+      <div class="card">
+        <h2 class="card-title">Soll vs. Ist nach Projekt</h2>
+        <div style="position: relative; height: 300px;">
+          <canvas id="chart-projekte"></canvas>
         </div>
       </div>
-
-      <!-- Top Deviations Column -->
-      <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
-        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Grösste Aufwandsabweichungen</h3>
-        <p class="text-xs text-slate-400 mb-4">Aufgaben mit höchstem Mehr- oder Minderaufwand</p>
-        
-        <div id="top-deviations-list" class="space-y-3 max-h-72 overflow-y-auto pr-1">
-          <!-- Populated by JavaScript -->
+      <div class="card">
+        <h2 class="card-title">Aufwandsverteilung (Ist-Zeit)</h2>
+        <div style="position: relative; height: 300px;">
+          <canvas id="chart-verteilung"></canvas>
         </div>
       </div>
     </div>
 
-    <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
-      <div class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
-        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Ausgewertete Aufgaben</h3>
-        <span id="table-count" class="text-xs text-slate-400">0 Aufgaben</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-b border-border-light dark:border-border-dark">
-            <tr>
-              <th class="p-3">Aufgabe</th>
-              <th class="p-3">Bereich / Projekt</th>
-              <th class="p-3">Prio</th>
-              <th class="p-3 text-right">Soll (h)</th>
-              <th class="p-3 text-right">Ist (h)</th>
-              <th class="p-3 text-right">Differenz</th>
-            </tr>
-          </thead>
-          <tbody id="tasks-table-body" class="divide-y divide-border-light dark:divide-border-dark">
-            <!-- Populated by JavaScript -->
-          </tbody>
-        </table>
-      </div>
+    <!-- Top Abweichungen -->
+    <div class="card">
+      <h2 class="card-title">Grösste Aufwandsabweichungen</h2>
+      <div id="tabelle-abweichungen"></div>
     </div>
 
   </main>
+</div>
 
-  <script>
-    const mockTasks = [
-      { id: "1", titel: "ISO-GPS Toleranzanalyse prüfen", bereich: "Arbeit", projekt: "ISO-GPS Prüfung", prio: "P1Dringend", sollZeit: 4.0, istZeit: 6.5 },
-      { id: "2", titel: "C# STEP AP242 Import-Parser erweitern", bereich: "Arbeit", projekt: "C# STEP Tooling", prio: "P1Dringend", sollZeit: 12.0, istZeit: 15.0 },
-      { id: "3", titel: "CAD Baugruppe Gehäuse 3D überarbeiten", bereich: "Arbeit", projekt: "CAD Modellierung", prio: "P2Wichtig", sollZeit: 8.0, istZeit: 7.5 },
-      { id: "4", titel: "Spezifikation Fertigungszeichnung erstellen", bereich: "Arbeit", projekt: "Dokumentation", prio: "P3Normal", sollZeit: 3.5, istZeit: 3.5 },
-      { id: "5", titel: "FEA Analyse Belastungstest durchführen", bereich: "Arbeit", projekt: "CAD Modellierung", prio: "P2Wichtig", sollZeit: 5.0, istZeit: 8.0 },
-      { id: "6", titel: "Unit Tests für C# Datenmodell schreiben", bereich: "Arbeit", projekt: "C# STEP Tooling", prio: "P3Normal", sollZeit: 4.0, istZeit: 2.5 },
-      { id: "7", titel: "Fahrrad Service & Kettenwechsel", bereich: "Privat", projekt: "Werkstatt", prio: "P3Normal", sollZeit: 1.5, istZeit: 2.0 },
-      { id: "8", titel: "Steuererklärung Belege sortieren", bereich: "Privat", projekt: "Finanzen", prio: "P4Spaeter", sollZeit: 3.0, istZeit: 3.0 }
-    ];
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script>
+let barChart = null;
+let pieChart = null;
 
-    let myChart = null;
-
-    function computeMetrics(tasks) {
-      let sollTotal = 0;
-      let istTotal = 0;
-
-      tasks.forEach(t => {
-        sollTotal += t.sollZeit || 0;
-        istTotal += t.istZeit || 0;
-      });
-
-      const diff = istTotal - sollTotal;
-      const diffPct = sollTotal > 0 ? (diff / sollTotal) * 100 : 0;
-
-      return {
-        sollTotal,
-        istTotal,
-        diff,
-        diffPct,
-        count: tasks.length
-      };
+async function initAuswertung() {
+  Store.onAuthChange((eingeloggt) => {
+    if (eingeloggt) {
+      initalisiereFilter();
+      rendereAuswertung();
     }
+  });
 
-    function groupByProject(tasks) {
-      const projects = {};
+  try {
+    await Store.starteAuthUeberwachung();
+  } catch (err) {
+    console.error("Fehler beim Start der Auswertung", err);
+  }
 
-      tasks.forEach(t => {
-        const pName = t.projekt || "Ohne Projekt";
-        if (!projects[pName]) {
-          projects[pName] = { soll: 0, ist: 0 };
-        }
-        projects[pName].soll += t.sollZeit || 0;
-        projects[pName].ist += t.istZeit || 0;
-      });
+  document.getElementById("filter-bereich").addEventListener("change", (e) => {
+    aktualisiereProjektDropdown(e.target.value);
+    rendereAuswertung();
+  });
 
-      return projects;
-    }
+  document.getElementById("filter-projekt").addEventListener("change", () => {
+    rendereAuswertung();
+  });
+}
 
-    function renderKPIs(metrics) {
-      document.getElementById('kpi-soll').textContent = `${metrics.sollTotal.toFixed(1)} h`;
-      document.getElementById('kpi-ist').textContent = `${metrics.istTotal.toFixed(1)} h`;
+function initalisiereFilter() {
+  const bereichSelect = document.getElementById("filter-bereich");
+  const bereiche = Store.getBereiche();
 
-      const diffEl = document.getElementById('kpi-diff');
-      const diffPctEl = document.getElementById('kpi-diff-pct');
+  bereichSelect.innerHTML = `<option value="Alle">Alle Bereiche</option>` +
+    bereiche.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join("");
 
-      const formattedDiff = (metrics.diff > 0 ? '+' : '') + metrics.diff.toFixed(1) + ' h';
-      diffEl.textContent = formattedDiff;
+  aktualisiereProjektDropdown("Alle");
+}
 
-      if (metrics.diff > 0) {
-        diffEl.className = 'text-2xl font-bold mt-1 text-red-600 dark:text-red-400';
-        diffPctEl.textContent = `▲ +${metrics.diffPct.toFixed(1)}% Mehraufwand`;
-        diffPctEl.className = 'text-xs font-semibold mt-1 text-red-600 dark:text-red-400';
-      } else if (metrics.diff < 0) {
-        diffEl.className = 'text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400';
-        diffPctEl.textContent = `▼ ${metrics.diffPct.toFixed(1)}% Ersparnis`;
-        diffPctEl.className = 'text-xs font-semibold mt-1 text-emerald-600 dark:text-emerald-400';
-      } else {
-        diffEl.className = 'text-2xl font-bold mt-1 text-slate-800 dark:text-slate-100';
-        diffPctEl.textContent = 'Exact im Plan';
-        diffPctEl.className = 'text-xs font-semibold mt-1 text-slate-500';
+function aktualisiereProjektDropdown(bereich) {
+  const projektSelect = document.getElementById("filter-projekt");
+  const alteAuswahl = projektSelect.value;
+
+  let projekte = [];
+  if (bereich === "Alle") {
+    projekte = Store.getProjekte();
+  } else {
+    projekte = Store.getProjekte(bereich);
+  }
+
+  projektSelect.innerHTML = `<option value="Alle">Alle Projekte</option>` +
+    projekte.map(p => `<option value="${escapeHtml(p.Name)}">${escapeHtml(p.Name)}</option>`).join("");
+
+  if ([...projektSelect.options].some(o => o.value === alteAuswahl)) {
+    projektSelect.value = alteAuswahl;
+  } else {
+    projektSelect.value = "Alle";
+  }
+}
+
+function holeGefilterteAufgaben() {
+  const gewaehlterBereich = document.getElementById("filter-bereich").value;
+  const gewaehltesProjekt = document.getElementById("filter-projekt").value;
+  let aufgaben = Store.getAufgaben();
+
+  if (gewaehlterBereich !== "Alle") {
+    aufgaben = aufgaben.filter(a => (a.Bereich || "").toLowerCase() === gewaehlterBereich.toLowerCase());
+  }
+
+  if (gewaehltesProjekt !== "Alle") {
+    aufgaben = aufgaben.filter(a => (a.ProjektName || "").toLowerCase() === gewaehltesProjekt.toLowerCase());
+  }
+
+  return aufgaben;
+}
+
+function rendereAuswertung() {
+  const aufgaben = holeGefilterteAufgaben();
+
+  let totalSoll = 0;
+  let totalIst = 0;
+  let anzahl = 0;
+
+  const projektStats = {};
+
+  aufgaben.forEach(a => {
+    const soll = parseFloat(a.SollZeit) || 0;
+    const ist = parseFloat(a.IstZeit) || 0;
+
+    if (soll > 0 || ist > 0) {
+      anzahl++;
+      totalSoll += soll;
+      totalIst += ist;
+
+      const pName = a.ProjektName || "Ohne Projekt";
+      if (!projektStats[pName]) {
+        projektStats[pName] = { soll: 0, ist: 0 };
       }
-
-      document.getElementById('kpi-count').textContent = metrics.count;
+      projektStats[pName].soll += soll;
+      projektStats[pName].ist += ist;
     }
+  });
 
-    function renderChart(projectData) {
-      const labels = Object.keys(projectData);
-      const sollData = labels.map(l => projectData[l].soll);
-      const istData = labels.map(l => projectData[l].ist);
+  const diff = totalIst - totalSoll;
+  document.getElementById("kpi-soll").textContent = `${totalSoll.toFixed(1)}h`;
+  document.getElementById("kpi-ist").textContent = `${totalIst.toFixed(1)}h`;
+  
+  const diffEl = document.getElementById("kpi-diff");
+  diffEl.textContent = `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}h`;
+  diffEl.style.color = diff > 0 ? "var(--color-p1)" : (diff < 0 ? "#2e7d32" : "inherit");
 
-      const ctx = document.getElementById('projectChart').getContext('2d');
+  document.getElementById("kpi-anzahl").textContent = anzahl;
 
-      if (myChart) {
-        myChart.destroy();
-      }
+  rendereBalkenDiagramm(projektStats);
+  rendereKuchenDiagramm(projektStats);
+  rendereTabelle(aufgaben);
+}
 
-      const isDark = document.documentElement.classList.contains('dark');
-      const textColor = isDark ? '#A0AEC0' : '#4A5568';
-      const gridColor = isDark ? '#2D3748' : '#EDF2F7';
+function rendereBalkenDiagramm(projektStats) {
+  const labels = Object.keys(projektStats);
+  const sollData = labels.map(l => projektStats[l].soll);
+  const istData = labels.map(l => projektStats[l].ist);
 
-      myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Soll-Zeit (h)',
-              data: sollData,
-              backgroundColor: isDark ? 'rgba(160, 174, 192, 0.5)' : 'rgba(203, 213, 225, 0.8)',
-              borderColor: isDark ? '#A0AEC0' : '#94A3B8',
-              borderWidth: 1,
-              borderRadius: 4
-            },
-            {
-              label: 'Ist-Zeit (h)',
-              data: istData,
-              backgroundColor: '#1565C0',
-              borderColor: '#0D47A1',
-              borderWidth: 1,
-              borderRadius: 4
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              ticks: { color: textColor, font: { size: 11 } },
-              grid: { display: false }
-            },
-            y: {
-              ticks: { color: textColor, font: { size: 11 } },
-              grid: { color: gridColor }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: { color: textColor, font: { size: 12 } }
-            }
-          }
-        }
-      });
+  const ctx = document.getElementById("chart-projekte").getContext("2d");
+  if (barChart) barChart.destroy();
+
+  barChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [
+        { label: "Soll (h)", data: sollData, backgroundColor: "rgba(54, 162, 235, 0.6)" },
+        { label: "Ist (h)", data: istData, backgroundColor: "rgba(255, 99, 132, 0.6)" }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } }
     }
+  });
+}
 
-    function renderTopDeviations(tasks) {
-      const sorted = [...tasks].sort((a, b) => (b.istZeit - b.sollZeit) - (a.istZeit - a.sollZeit));
-      const container = document.getElementById('top-deviations-list');
-      container.innerHTML = '';
+function rendereKuchenDiagramm(projektStats) {
+  const labels = Object.keys(projektStats);
+  const istData = labels.map(l => projektStats[l].ist);
 
-      sorted.slice(0, 4).forEach(t => {
-        const diff = t.istZeit - t.sollZeit;
-        const isOver = diff > 0;
-        
-        const item = document.createElement('div');
-        item.className = 'p-2.5 rounded-lg border border-border-light dark:border-border-dark flex items-center justify-between text-xs bg-slate-50/50 dark:bg-slate-800/30';
-        
-        item.innerHTML = `
-          <div class="min-w-0 flex-1 pr-2">
-            <div class="font-medium truncate text-slate-800 dark:text-slate-200">${escapeHtml(t.titel)}</div>
-            <div class="text-slate-400 text-[10px]">${escapeHtml(t.projekt)}</div>
-          </div>
-          <div class="text-right flex-shrink-0">
-            <div class="font-bold ${isOver ? 'text-red-500' : 'text-emerald-500'}">
-              ${isOver ? '+' : ''}${diff.toFixed(1)} h
-            </div>
-            <div class="text-[10px] text-slate-400">${t.istZeit}h / ${t.sollZeit}h</div>
-          </div>
-        `;
-        container.appendChild(item);
-      });
+  const ctx = document.getElementById("chart-verteilung").getContext("2d");
+  if (pieChart) pieChart.destroy();
+
+  pieChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: istData,
+        backgroundColor: [
+          "#4bc0c0", "#ff6384", "#36a2eb", "#ffce56", "#9966ff", "#ff9f40"
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
     }
+  });
+}
 
-    function renderTable(tasks) {
-      const tbody = document.getElementById('tasks-table-body');
-      tbody.innerHTML = '';
-      document.getElementById('table-count').textContent = `${tasks.length} Aufgaben`;
+function rendereTabelle(aufgaben) {
+  const container = document.getElementById("tabelle-abweichungen");
+  
+  const abweichungen = aufgaben
+    .map(a => {
+      const soll = parseFloat(a.SollZeit) || 0;
+      const ist = parseFloat(a.IstZeit) || 0;
+      return { ...a, soll, ist, diff: ist - soll };
+    })
+    .filter(a => a.soll > 0 || a.ist > 0)
+    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
-      tasks.forEach(t => {
-        const diff = t.istZeit - t.sollZeit;
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors';
+  if (abweichungen.length === 0) {
+    container.innerHTML = `<p style="color: var(--color-text-muted); font-size: 13px;">Keine Aufgaben mit Zeiterfassung vorhanden.</p>`;
+    return;
+  }
 
-        let prioBadge = 'badge-p3';
-        let prioText = 'P3';
-        if (t.prio === 'P1Dringend') { prioBadge = 'badge-p1'; prioText = 'P1'; }
-        else if (t.prio === 'P2Wichtig') { prioBadge = 'badge-p2'; prioText = 'P2'; }
+  let html = `
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;">
+      <thead>
+        <tr style="border-bottom: 1px solid var(--color-border, #ccc); padding-bottom: 8px;">
+          <th style="padding: 8px;">Titel</th>
+          <th style="padding: 8px;">Projekt</th>
+          <th style="padding: 8px;">Soll</th>
+          <th style="padding: 8px;">Ist</th>
+          <th style="padding: 8px;">Abweichung</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
 
-        tr.innerHTML = `
-          <td class="p-3 font-medium text-slate-800 dark:text-slate-200">${escapeHtml(t.titel)}</td>
-          <td class="p-3 text-slate-500 dark:text-slate-400">${escapeHtml(t.bereich)} · ${escapeHtml(t.projekt)}</td>
-          <td class="p-3"><span class="badge ${prioBadge}">${prioText}</span></td>
-          <td class="p-3 text-right text-slate-600 dark:text-slate-400">${t.sollZeit.toFixed(1)} h</td>
-          <td class="p-3 text-right font-semibold text-primary dark:text-blue-400">${t.istZeit.toFixed(1)} h</td>
-          <td class="p-3 text-right font-semibold ${diff > 0 ? 'text-red-500' : (diff < 0 ? 'text-emerald-500' : 'text-slate-400')}">
-            ${diff > 0 ? '+' : ''}${diff.toFixed(1)} h
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+  abweichungen.forEach(a => {
+    const diffText = `${a.diff >= 0 ? "+" : ""}${a.diff.toFixed(1)}h`;
+    const diffColor = a.diff > 0 ? "var(--color-p1)" : (a.diff < 0 ? "#2e7d32" : "inherit");
 
-    function escapeHtml(str) {
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
+    html += `
+      <tr style="border-bottom: 1px solid var(--color-border, #eee);">
+        <td style="padding: 8px;">${escapeHtml(a.Titel)}</td>
+        <td style="padding: 8px; color: var(--color-text-muted);">${escapeHtml(a.ProjektName || "-")}</td>
+        <td style="padding: 8px;">${a.soll.toFixed(1)}h</td>
+        <td style="padding: 8px;">${a.ist.toFixed(1)}h</td>
+        <td style="padding: 8px; font-weight: bold; color: ${diffColor};">${diffText}</td>
+      </tr>
+    `;
+  });
 
-    function updateDashboard() {
-      const bereich = document.getElementById('bereich-filter').value;
-      const filteredTasks = bereich === 'Alle' 
-        ? mockTasks 
-        : mockTasks.filter(t => t.bereich.toLowerCase() === bereich.toLowerCase());
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
 
-      const metrics = computeMetrics(filteredTasks);
-      const projectData = groupByProject(filteredTasks);
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text ?? "";
+  return div.innerHTML;
+}
 
-      renderKPIs(metrics);
-      renderChart(projectData);
-      renderTopDeviations(filteredTasks);
-      renderTable(filteredTasks);
-    }
+document.addEventListener("DOMContentLoaded", initAuswertung);
+</script>
 
-    // Theme toggle setup
-    const themeBtn = document.getElementById('theme-toggle');
-    themeBtn.addEventListener('click', () => {
-      document.documentElement.classList.toggle('dark');
-      const isDark = document.documentElement.classList.contains('dark');
-      themeBtn.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
-      updateDashboard();
-    });
-
-    // Filter listener
-    document.getElementById('bereich-filter').addEventListener('change', updateDashboard);
-
-    // Initial load
-    window.onload = () => {
-      updateDashboard();
-    };
-  </script>
 </body>
 </html>
