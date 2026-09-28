@@ -209,20 +209,20 @@ const Dashboard = {
     row.className = "aufgabe-row";
     row.addEventListener("click", () => App.oeffneDetails(aufgabe.Id));
 
-    const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich);
-    if (bereichFarbe) row.style.borderLeftColor = bereichFarbe;
+    // Falls keine eigene Farbe für den Bereich hinterlegt ist, Fallback-Grau nutzen
+    const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich) || "#888888";
+    row.style.borderLeftColor = bereichFarbe;
 
     const heute = heuteIso();
     const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.Status !== AufgabenStatus.Erledigt;
 
-    // KORREKT: In der nachfolgenden Zeile ist das <span class="bereich-farbe-dot"> wieder enthalten!
     row.innerHTML = `
       <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}">${Anzeige.statusSymbol(aufgabe.Status)}</span>
       <span class="badge ${Anzeige.prioritaetBadgeClass(aufgabe.Prioritaet)}">${Anzeige.prioritaetText(aufgabe.Prioritaet)}</span>
       <div class="aufgabe-row__main">
         <div class="aufgabe-row__titel ${aufgabe.Status === AufgabenStatus.Erledigt ? "is-erledigt" : ""}">${escapeHtml(aufgabe.Titel)}</div>
         <div class="aufgabe-row__meta">
-          ${bereichFarbe ? `<span class="bereich-farbe-dot" style="background:${bereichFarbe};"></span>` : ""}
+          <span class="bereich-farbe-dot" style="background:${bereichFarbe};"></span>
           ${escapeHtml(aufgabe.Bereich || "")}
           ${aufgabe.ProjektName ? " · " + escapeHtml(aufgabe.ProjektName) : ""}
         </div>
