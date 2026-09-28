@@ -236,13 +236,30 @@ const Dashboard = {
     const heute = heuteIso();
     const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.Status !== AufgabenStatus.Erledigt;
 
+    // 1. Checkliste-Badge
     const checkliste = aufgabe.Checkliste || [];
     const anzahlGesamt = checkliste.length;
     let checklisteHtml = "";
-
     if (anzahlGesamt > 0) {
       const anzahlErledigt = checkliste.filter((p) => p.IstErledigt || p.Erledigt || p.erledigt).length;
       checklisteHtml = ` <span class="checkliste-progress-badge" title="Checkliste: ${anzahlErledigt} von ${anzahlGesamt} erledigt">☑ ${anzahlErledigt}/${anzahlGesamt}</span>`;
+    }
+
+    // 2. Zeiterfassungs-Badge
+    let zeitHtml = "";
+    const soll = parseFloat(aufgabe.SollZeit) || 0;
+    const ist = parseFloat(aufgabe.IstZeit) || 0;
+    if (soll > 0 || ist > 0) {
+      zeitHtml = ` <span class="checkliste-progress-badge" title="Zeit: ${ist}h von ${soll}h">⏱ ${ist}h${soll > 0 ? ` / ${soll}h` : ""}</span>`;
+    }
+
+    // 3. Datei- / Web-Link Badge
+    let linkHtml = "";
+    if (aufgabe.Link && aufgabe.Link.trim()) {
+      const rawLink = aufgabe.Link.trim();
+      const istDatei = rawLink.startsWith("file://") || rawLink.includes(":\\") || rawLink.startsWith("\\\\");
+      const icon = istDatei ? "📁" : "🔗";
+      linkHtml = ` <a href="${escapeHtml(rawLink)}" target="_blank" onclick="event.stopPropagation();" class="checkliste-progress-badge" style="text-decoration: none; color: inherit;" title="${escapeHtml(rawLink)}">${icon} Link</a>`;
     }
 
     row.innerHTML = `
@@ -255,6 +272,8 @@ const Dashboard = {
           ${escapeHtml(aufgabe.Bereich || "")}
           ${aufgabe.ProjektName ? " · " + escapeHtml(aufgabe.ProjektName) : ""}
           ${checklisteHtml}
+          ${zeitHtml}
+          ${linkHtml}
         </div>
       </div>
       ${aufgabe.Faelligkeit ? `<span class="faellig-tag ${istUeberfaellig ? "is-ueberfaellig" : ""}">${Anzeige.faelligkeitText(aufgabe.Faelligkeit)}</span>` : ""}
