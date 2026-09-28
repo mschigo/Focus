@@ -1,35 +1,32 @@
 /**
  * Focus Web – Dashboard.
- * Dashboard mit Dropdown-Filtern und frei wählbarer Sortierung.
+ * Entspricht ViewModels/DashboardViewModel.cs: KPIs, nach Priorität/Fälligkeit
+ * gruppierte Top-Listen, Bereichs-/Projektfilter, ein-/ausklappbare Sektionen.
  */
 
 const ALLE_SEKTION_KEYS = ["Ueberfaellig", "P1", "P2", "P3", "Heute", "DieseWoche", "Erledigt"];
-const DASHBOARD_SORTIERUNGEN = [
-  { wert: "prioritaet", text: "Priorität und Fälligkeit" },
-  { wert: "faelligkeit", text: "Fälligkeit" },
-  { wert: "geaendert", text: "Zuletzt geändert" },
-  { wert: "titel", text: "Titel (A–Z)" },
-];
 
 const Dashboard = {
   ausgewaehlterBereich: "Alle",
   ausgewaehltesProjekt: "Alle",
-  sortierung: "prioritaet",
-  eingeklappt: new Set(["Erledigt"]),
+  eingeklappt: new Set(["Erledigt"]), // Erledigt ist standardmäßig eingeklappt, wie in der App.
 
   init() {
     document.addEventListener("focus:datenGeaendert", () => this.render());
     document.getElementById("dashboard-toggle-alle-btn").addEventListener("click", () => this.toggleAlleSektionen());
-    document.getElementById("dashboard-sortierung").addEventListener("change", (event) => this.setSortierung(event.target.value));
-    document.getElementById("dashboard-bereich-filter").addEventListener("change", (event) => this.setBereichFilter(event.target.value));
-    document.getElementById("dashboard-projekt-filter").addEventListener("change", (event) => this.setProjektFilter(event.target.value));
     this.render();
   },
 
+  /** Klappt alle Sektionen auf, wenn mindestens eine eingeklappt ist – sonst alle zu. */
   toggleAlleSektionen() {
     const alleOffen = this.eingeklappt.size === 0;
-    if (alleOffen) for (const key of ALLE_SEKTION_KEYS) this.eingeklappt.add(key);
-    else this.eingeklappt.clear();
+
+    if (alleOffen) {
+      for (const key of ALLE_SEKTION_KEYS) this.eingeklappt.add(key);
+    } else {
+      this.eingeklappt.clear();
+    }
+
     this.render();
   },
 
@@ -44,54 +41,54 @@ const Dashboard = {
     this.render();
   },
 
-  setSortierung(sortierung) {
-    this.sortierung = sortierung;
-    this.render();
-  },
-
   toggleSektion(key) {
-    if (this.eingeklappt.has(key)) this.eingeklappt.delete(key);
-    else this.eingeklappt.add(key);
+    if (this.eingeklappt.has(key)) {
+      this.eingeklappt.delete(key);
+    } else {
+      this.eingeklappt.add(key);
+    }
     this.render();
   },
 
   _gefiltert(aufgaben) {
     let query = aufgaben;
+
     if (this.ausgewaehlterBereich !== "Alle") {
       query = query.filter((a) => (a.Bereich || "").toLowerCase() === this.ausgewaehlterBereich.toLowerCase());
+
       if (this.ausgewaehltesProjekt !== "Alle") {
         query = query.filter((a) => (a.ProjektName || "").toLowerCase() === this.ausgewaehltesProjekt.toLowerCase());
       }
     }
+
     return query;
   },
 
-  _sortiere(liste) {
+  _sortiereNachPrioUndFaelligkeit(liste) {
     return [...liste].sort((a, b) => {
-      if (this.sortierung === "titel") return (a.Titel || "").localeCompare(b.Titel || "", "de", { sensitivity: "base" });
-      if (this.sortierung === "geaendert") return (b.GeaendertAm || "").localeCompare(a.GeaendertAm || "");
-      if (this.sortierung === "faelligkeit") {
-        const faelA = a.Faelligkeit || "9999-12-31";
-        const faelB = b.Faelligkeit || "9999-12-31";
-        return faelA.localeCompare(faelB) || PRIORITAET_REIHENFOLGE.indexOf(a.Prioritaet) - PRIORITAET_REIHENFOLGE.indexOf(b.Prioritaet);
-      }
-      const prio = PRIORITAET_REIHENFOLGE.indexOf(a.Prioritaet) - PRIORITAET_REIHENFOLGE.indexOf(b.Prioritaet);
-      if (prio !== 0) return prio;
-      return (a.Faelligkeit || "9999-12-31").localeCompare(b.Faelligkeit || "9999-12-31");
+      const prioA = PRIORITAET_REIHENFOLGE.indexOf(a.Prioritaet);
+      const prioB = PRIORITAET_REIHENFOLGE.indexOf(b.Prioritaet);
+      if (prioA !== prioB) return prioA - prioB;
+
+      const faelA = a.Faelligkeit || "9999-12-31";
+      const faelB = b.Faelligkeit || "9999-12-31";
+      return faelA.localeCompare(faelB);
     });
   },
 
   render() {
     const aufgaben = Store.getAufgaben();
     const bereiche = Store.getBereiche();
-    this._renderSortierung();
+
     this._renderBereichFilter(bereiche);
-    this._renderProjektFilter();
+    this._renderProjektFilter(aufgaben, bereiche);
 
     const offen = aufgaben.filter((a) => a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit);
     const gefiltert = this._gefiltert(offen);
+
     const heute = heuteIso();
     const wochenEnde = wochenEndeIso(heute);
+
     const kpis = {
       offeneGesamt: gefiltert.length,
       offenP1: gefiltert.filter((a) => a.Prioritaet === Prioritaet.P1Dringend).length,
@@ -100,9 +97,13 @@ const Dashboard = {
       dieseWocheFaellig: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde).length,
       ueberfaellig: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit < heute).length,
     };
+
     this._renderKpis(kpis);
 
-    const erledigt = this._gefiltert(aufgaben.filter((a) => a.Status === AufgabenStatus.Erledigt));
+    const erledigt = this._gefiltert(aufgaben.filter((a) => a.Status === AufgabenStatus.Erledigt))
+      .sort((a, b) => (b.GeaendertAm || "").localeCompare(a.GeaendertAm || ""))
+      .slice(0, 30);
+
     const sektionen = [
       { key: "Ueberfaellig", titel: "Überfällig", items: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit < heute) },
       { key: "P1", titel: "Top P1", items: gefiltert.filter((a) => a.Prioritaet === Prioritaet.P1Dringend) },
@@ -112,33 +113,60 @@ const Dashboard = {
       { key: "DieseWoche", titel: "Diese Woche", items: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde) },
       { key: "Erledigt", titel: "Erledigt", items: erledigt, keineBegrenzung: true },
     ];
-    for (const sektion of sektionen) sektion.items = this._sortiere(sektion.items).slice(0, sektion.keineBegrenzung ? 30 : 10);
+
+    for (const sektion of sektionen) {
+      if (!sektion.keineBegrenzung) {
+        sektion.items = this._sortiereNachPrioUndFaelligkeit(sektion.items).slice(0, 10);
+      }
+    }
+
     this._renderSektionen(sektionen);
   },
 
-  _renderSortierung() {
-    const select = document.getElementById("dashboard-sortierung");
-    select.innerHTML = DASHBOARD_SORTIERUNGEN.map((o) => `<option value="${o.wert}">${o.text}</option>`).join("");
-    select.value = this.sortierung;
-  },
-
   _renderBereichFilter(bereiche) {
-    const select = document.getElementById("dashboard-bereich-filter");
+    const container = document.getElementById("dashboard-bereich-filter");
     const optionen = ["Alle", ...bereiche];
-    if (!optionen.includes(this.ausgewaehlterBereich)) this.ausgewaehlterBereich = "Alle";
-    select.innerHTML = optionen.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("");
-    select.value = this.ausgewaehlterBereich;
+
+    if (!optionen.includes(this.ausgewaehlterBereich)) {
+      this.ausgewaehlterBereich = "Alle";
+    }
+
+    container.innerHTML = "";
+    for (const option of optionen) {
+      const btn = document.createElement("button");
+      btn.className = "chip" + (option === this.ausgewaehlterBereich ? " is-selected" : "");
+      btn.textContent = option;
+      btn.addEventListener("click", () => this.setBereichFilter(option));
+      container.appendChild(btn);
+    }
   },
 
-  _renderProjektFilter() {
+  _renderProjektFilter(aufgaben, _bereiche) {
     const group = document.getElementById("dashboard-projekt-filter-group");
-    const select = document.getElementById("dashboard-projekt-filter");
-    if (this.ausgewaehlterBereich === "Alle") { group.hidden = true; return; }
-    const optionen = ["Alle", ...Store.getProjekte(this.ausgewaehlterBereich).map((p) => p.Name)];
-    if (!optionen.includes(this.ausgewaehltesProjekt)) this.ausgewaehltesProjekt = "Alle";
+    const container = document.getElementById("dashboard-projekt-filter");
+
+    if (this.ausgewaehlterBereich === "Alle") {
+      group.hidden = true;
+      return;
+    }
+
+    const projektNamen = Store.getProjekte(this.ausgewaehlterBereich).map((p) => p.Name);
+    const optionen = ["Alle", ...projektNamen];
+
+    if (!optionen.includes(this.ausgewaehltesProjekt)) {
+      this.ausgewaehltesProjekt = "Alle";
+    }
+
     group.hidden = optionen.length <= 1;
-    select.innerHTML = optionen.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("");
-    select.value = this.ausgewaehltesProjekt;
+
+    container.innerHTML = "";
+    for (const option of optionen) {
+      const btn = document.createElement("button");
+      btn.className = "chip" + (option === this.ausgewaehltesProjekt ? " is-selected" : "");
+      btn.textContent = option;
+      btn.addEventListener("click", () => this.setProjektFilter(option));
+      container.appendChild(btn);
+    }
   },
 
   _renderKpis(kpis) {
@@ -151,33 +179,74 @@ const Dashboard = {
       { label: "Diese Woche", value: kpis.dieseWocheFaellig, cls: "" },
       { label: "Überfällig", value: kpis.ueberfaellig, cls: kpis.ueberfaellig > 0 ? "kpi-card--warn" : "" },
     ];
-    container.innerHTML = karten.map((k) => `<div class="kpi-card ${k.cls}"><div class="kpi-card__value">${k.value}</div><div class="kpi-card__label">${k.label}</div></div>`).join("");
+
+    container.innerHTML = karten
+      .map(
+        (k) => `
+      <div class="kpi-card ${k.cls}">
+        <div class="kpi-card__value">${k.value}</div>
+        <div class="kpi-card__label">${k.label}</div>
+      </div>`
+      )
+      .join("");
   },
 
   _renderSektionen(sektionen) {
     const container = document.getElementById("dashboard-sektionen");
     container.innerHTML = "";
-    document.getElementById("dashboard-toggle-alle-btn").textContent = this.eingeklappt.size === 0 ? "Alle einklappen" : "Alle aufklappen";
+
+    document.getElementById("dashboard-toggle-alle-btn").textContent =
+      this.eingeklappt.size === 0 ? "Alle einklappen" : "Alle aufklappen";
+
     for (const sektion of sektionen) {
       const istEingeklappt = this.eingeklappt.has(sektion.key);
-      const wrapper = document.createElement("div"); wrapper.className = "sektion";
-      const header = document.createElement("div"); header.className = "sektion__header";
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "sektion";
+
+      const header = document.createElement("div");
+      header.className = "sektion__header";
       header.innerHTML = `<span class="chevron">${istEingeklappt ? "▶" : "▼"}</span> ${sektion.titel} (${sektion.items.length})`;
-      header.addEventListener("click", () => this.toggleSektion(sektion.key)); wrapper.appendChild(header);
-      const body = document.createElement("div"); body.className = "sektion__body" + (istEingeklappt ? " is-collapsed" : "");
-      if (!sektion.items.length) body.innerHTML = `<div class="sektion__empty">Keine Aufgaben.</div>`;
-      else for (const aufgabe of sektion.items) body.appendChild(this._renderAufgabeRow(aufgabe));
-      wrapper.appendChild(body); container.appendChild(wrapper);
+      header.addEventListener("click", () => this.toggleSektion(sektion.key));
+      wrapper.appendChild(header);
+
+      const body = document.createElement("div");
+      body.className = "sektion__body" + (istEingeklappt ? " is-collapsed" : "");
+
+      if (sektion.items.length === 0) {
+        body.innerHTML = `<div class="sektion__empty">Keine Aufgaben.</div>`;
+      } else {
+        for (const aufgabe of sektion.items) {
+          body.appendChild(this._renderAufgabeRow(aufgabe));
+        }
+      }
+
+      wrapper.appendChild(body);
+      container.appendChild(wrapper);
     }
   },
 
   _renderAufgabeRow(aufgabe) {
-    const row = document.createElement("div"); row.className = "aufgabe-row";
+    const row = document.createElement("div");
+    row.className = "aufgabe-row";
     row.addEventListener("click", () => App.oeffneDetails(aufgabe.Id));
+
     const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich);
     if (bereichFarbe) row.style.borderLeftColor = bereichFarbe;
-    const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heuteIso() && aufgabe.IstAktiv;
-    row.innerHTML = `<span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}">${Anzeige.statusSymbol(aufgabe.Status)}</span><span class="badge ${Anzeige.prioritaetBadgeClass(aufgabe.Prioritaet)}">${Anzeige.prioritaetText(aufgabe.Prioritaet)}</span><div class="aufgabe-row__main"><div class="aufgabe-row__titel ${aufgabe.Status === AufgabenStatus.Erledigt ? "is-erledigt" : ""}">${escapeHtml(aufgabe.Titel)}</div><div class="aufgabe-row__meta">${bereichFarbe ? `<span class="bereich-farbe-dot" style="background:${bereichFarbe}"></span>` : ""}${escapeHtml(aufgabe.Bereich || "")}${aufgabe.ProjektName ? ` · ${escapeHtml(aufgabe.ProjektName)}` : ""}</div></div>${aufgabe.Faelligkeit ? `<span class="faellig-tag ${istUeberfaellig ? "is-ueberfaellig" : ""}">${Anzeige.faelligkeitText(aufgabe.Faelligkeit)}</span>` : ""}`;
+
+    const heute = heuteIso();
+    const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.IstAktiv;
+
+    row.innerHTML = `
+      <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}">${Anzeige.statusSymbol(aufgabe.Status)}</span>
+      <span class="badge ${Anzeige.prioritaetBadgeClass(aufgabe.Prioritaet)}">${Anzeige.prioritaetText(aufgabe.Prioritaet)}</span>
+      <div class="aufgabe-row__main">
+        <div class="aufgabe-row__titel ${aufgabe.Status === AufgabenStatus.Erledigt ? "is-erledigt" : ""}">${escapeHtml(aufgabe.Titel)}</div>
+        <div class="aufgabe-row__meta">${bereichFarbe ? `<span class="bereich-farbe-dot" style="background:${bereichFarbe}"></span>` : ""}${escapeHtml(aufgabe.Bereich || "")}${aufgabe.ProjektName ? " · " + escapeHtml(aufgabe.ProjektName) : ""}</div>
+      </div>
+      ${aufgabe.Faelligkeit ? `<span class="faellig-tag ${istUeberfaellig ? "is-ueberfaellig" : ""}">${Anzeige.faelligkeitText(aufgabe.Faelligkeit)}</span>` : ""}
+    `;
+
     return row;
   },
 };
