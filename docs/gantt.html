@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focus – Gantt Chart</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js & Date-Adapter für Gantt/Timeline -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+
+<div id="app-shell">
+  <header class="app-header">
+    <div class="app-header__brand">
+      <span class="app-header__logo">F</span>
+      <h1>Focus – Gantt Timeline</h1>
+    </div>
+    <nav class="tabbar" id="tabbar" style="margin-left: auto;">
+      <a href="index.html" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;">
+        ← Zurück zum Dashboard
+      </a>
+    </nav>
+  </header>
+
+  <main id="app-main" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+    
+    <!-- Filterleiste -->
+    <div class="filter-row" style="margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
+      <div class="filter-group">
+        <label class="filter-group__label" for="filter-bereich">Bereich</label>
+        <select id="filter-bereich" class="form-input" style="min-width: 160px;">
+          <option value="Alle">Alle Bereiche</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-group__label" for="filter-projekt">Projekt</label>
+        <select id="filter-projekt" class="form-input" style="min-width: 160px;">
+          <option value="Alle">Alle Projekte</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Gantt Chart Karte -->
+    <div class="card" style="margin-bottom: 24px;">
+      <h2 class="card-title">Projekt-Timeline (Fälligkeiten & Zeiträume)</h2>
+      <div style="position: relative; height: 450px; width: 100%;">
+        <canvas id="gantt-chart"></canvas>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/store.js"></script>
+<script>
+let ganttChart = null;
+
+async function initGantt() {
+  Store.onAuthChange((eingeloggt) => {
+    if (eingeloggt) {
+      initalisiereFilter();
+      rendereGantt();
+    }
+  });
+
+  try {
+    await Store.starteAuthUeberwachung();
+  } catch (err) {
+    console.error("Fehler beim Start des Gantt Charts", err);
+  }
+
+  document.getElementById("filter-bereich").addEventListener("change", (e) => {
+    aktualisiereProjektDropdown(e.target.value);
+    rendereGantt();
+  });
+
+  document.getElementById("filter-projekt").addEventListener("change", () => {
+    rendereGantt();
+  });
+}
+
+function initalisiereFilter() {
+  const bereichSelect = document.getElementById("filter-bereich");
+  const bereiche = Store.getBereiche();
+
+  bereichSelect.innerHTML = `<option value="Alle">Alle Bereiche</option>` +
+    bereiche.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join("");
+
+  aktualisiereProjektDropdown("Alle");
+}
+
+function aktualisiereProjektDropdown(bereich) {
+  const projektSelect = document.getElementById("filter-projekt");
+  const alteAuswahl = projektSelect.value;
+
+  let projekte = [];
+  if (bereich === "Alle") {
+    projekte = Store.getProjekte();
+  } else {
+    projekte = Store.getProjekte(bereich);
+  }
+
+  projektSelect.innerHTML = `<option value="Alle">Alle Projekte</option>` +
+    projekte.map(p => `<option value="${escapeHtml(p.Name)}">${escapeHtml(p.Name)}</option>`).join("");
+
+  if ([...projektSelect.options].some(o => o.value === alteAuswahl)) {
+    projektSelect.value = alteAuswahl;
+  } else {
+    projektSelect.value = "Alle";
+  }
+}
+
+function holeGefilterteAufgaben() {
+  const gewaehlterBereich = document.getElementById("filter-bereich").value;
+  const gewaehltesProjekt = document.getElementById("filter-projekt").value;
+
+  let aufgaben = Store.getAufgaben();
+
+  if (gewaehlterBereich !== "Alle") {
+    aufgaben = aufgaben.filter(a => (a.Bereich || "").toLowerCase() === gewaehlterBereich.toLowerCase());
+  }
+
+  if (gewaehltesProjekt !== "Alle") {
+    aufgaben = aufgaben.filter(a => (a.ProjektName || "").toLowerCase() === gewaehltesProjekt.toLowerCase());
+  }
+
+  return aufgaben;
+}
+
+function rendereGantt() {
+  const aufgaben = holeGefilterteAufgaben();
+  const ctx = document.getElementById("gantt-chart").getContext("2d");
+
+  if (ganttChart) ganttChart.destroy();
+
+  // Nur Aufgaben mit Fälligkeit berücksichtigen
+  const aufgabenMitDatum = aufgaben.filter(a => a.Faelligkeit);
+
+  if (aufgabenMitDatum.length === 0) {
+    return;
+  }
+
+  const labels = [];
+  const dataPoints = [];
+  const backgroundColors = [];
+
+  aufgabenMitDatum.forEach(a => {
+    const titel = a.Titel;
+    const faellig = a.Faelligkeit; // YYYY-MM-DD
+    
+    // Startdatum berechnen (ErstelltAm oder 1 Tag vor Fälligkeit)
+    let start = a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : faellig;
+    if (start > faellig) start = faellig;
+
+    labels.push(titel);
+    dataPoints.push([start, faellig]);
+
+    // Farbe nach Status/Priorität
+    if (a.Status === "Erledigt") {
+      backgroundColors.push("rgba(75, 192, 192, 0.7)");
+    } else if (a.Prioritaet === "P1Dringend") {
+      backgroundColors.push("rgba(255, 99, 132, 0.8)");
+    } else {
+      backgroundColors.push("rgba(54, 162, 235, 0.7)");
+    }
+  });
+
+  ganttChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Zeitraum",
+        data: dataPoints,
+        backgroundColor: backgroundColors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: "time",
+          time: {
+            unit: "day",
+            displayFormats: { day: "dd.MM.yyyy" }
+          },
+          title: { display: true, text: "Datum" }
+        },
+        y: {
+          title: { display: true, text: "Aufgaben" }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text ?? "";
+  return div.innerHTML;
+}
+
+document.addEventListener("DOMContentLoaded", initGantt);
+</script>
+
+</body>
+</html>
