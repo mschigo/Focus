@@ -133,9 +133,29 @@ const App = {
       const bereichSelect = document.getElementById("neu-bereich");
       if (bereichSelect) {
         bereichSelect.innerHTML = bereiche.map(b => `<option value="${appEscapeHtml(b)}">${appEscapeHtml(b)}</option>`).join("");
+
+        // Aktiven Dashboard-Filter (Bereich) übernehmen, falls einer gesetzt ist.
+        if (typeof Dashboard !== "undefined" && Dashboard.ausgewaehlterBereich !== "Alle") {
+          const passenderBereich = bereiche.find(
+            (b) => b.toLowerCase() === Dashboard.ausgewaehlterBereich.toLowerCase()
+          );
+          if (passenderBereich) bereichSelect.value = passenderBereich;
+        }
       }
 
       this._updateNeuProjektDropdown();
+
+      // Aktiven Dashboard-Filter (Projekt) übernehmen, falls einer gesetzt ist
+      // und zum gewählten Bereich passt.
+      if (typeof Dashboard !== "undefined" && Dashboard.ausgewaehltesProjekt !== "Alle") {
+        const projektSelect = document.getElementById("neu-projekt");
+        const passendesProjekt = projektSelect
+          ? [...projektSelect.options].find(
+              (o) => o.value.toLowerCase() === Dashboard.ausgewaehltesProjekt.toLowerCase()
+            )
+          : null;
+        if (passendesProjekt) projektSelect.value = passendesProjekt.value;
+      }
 
       const popup = document.getElementById("neue-aufgabe-popup");
       if (popup) popup.hidden = false;
