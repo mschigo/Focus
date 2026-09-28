@@ -54,10 +54,14 @@ function wochenEndeIso(heute) {
 }
 
 function normalisiereDaten(parsed) {
+  const bereichFarben = parsed?.Konfiguration?.BereichFarben;
   return {
     Aufgaben: Array.isArray(parsed?.Aufgaben) ? parsed.Aufgaben : [],
     Projekte: Array.isArray(parsed?.Projekte) ? parsed.Projekte : [],
-    Konfiguration: { Bereiche: Array.isArray(parsed?.Konfiguration?.Bereiche) ? parsed.Konfiguration.Bereiche : [] },
+    Konfiguration: {
+      Bereiche: Array.isArray(parsed?.Konfiguration?.Bereiche) ? parsed.Konfiguration.Bereiche : [],
+      BereichFarben: bereichFarben && typeof bereichFarben === "object" ? bereichFarben : {},
+    },
   };
 }
 
@@ -130,11 +134,29 @@ const Store = {
 
     if (data && data.daten) {
       this._daten = normalisiereDaten(data.daten);
+      this._migriereLokaleBereichFarben();
       return;
     }
 
-    this._daten = { Aufgaben: [], Projekte: [], Konfiguration: { Bereiche: ["Arbeit", "Privat"] } };
+    this._daten = { Aufgaben: [], Projekte: [], Konfiguration: { Bereiche: ["Arbeit", "Privat"], BereichFarben: {} } };
     await supabaseClient.from("focus_daten").insert({ user_id: userId, daten: this._daten });
+    this._migriereLokaleBereichFarben();
+  },
+
+  // Einmalige Migration: Bereichsfarben, die vorher nur lokal (localStorage)
+  // gespeichert waren, in die Datenbank übernehmen, falls dort noch keine
+  // Farben hinterlegt sind.
+  _migriereLokaleBereichFarben() {
+    try {
+      if (Object.keys(this._daten.Konfiguration.BereichFarben).length > 0) return;
+      const lokal = LokaleEinstellungen._laden().bereichFarben || {};
+      if (Object.keys(lokal).length === 0) return;
+
+      this._daten.Konfiguration.BereichFarben = { ...lokal };
+      this.speichern();
+    } catch (err) {
+      console.error("Focus: Fehler bei der Migration lokaler Bereichsfarben.", err);
+    }
   },
 
   speichern() {
@@ -183,6 +205,24 @@ const Store = {
         IstZeit: parseFloat(a.IstZeit) || 0,
       };
     });
+  },
+
+  getBereichFarbe(bereichName) {
+    this._pruefeGeladen();
+    if (!bereichName || !bereichName.trim()) return "";
+    return this._daten.Konfiguration.BereichFarben[bereichName.trim()] || "";
+  },
+
+  setBereichFarbe(bereichName, hex) {
+    this._pruefeGeladen();
+    if (!bereichName || !bereichName.trim()) return;
+    const key = bereichName.trim();
+    if (!hex) {
+      delete this._daten.Konfiguration.BereichFarben[key];
+    } else {
+      this._daten.Konfiguration.BereichFarben[key] = hex;
+    }
+    this.speichern();
   },
 
   getBereiche() {
@@ -341,6 +381,11 @@ const Store = {
       }
     }
 
+    if (Object.prototype.hasOwnProperty.call(this._daten.Konfiguration.BereichFarben, alt)) {
+      this._daten.Konfiguration.BereichFarben[neu] = this._daten.Konfiguration.BereichFarben[alt];
+      delete this._daten.Konfiguration.BereichFarben[alt];
+    }
+
     this.speichern();
   },
 
@@ -357,6 +402,7 @@ const Store = {
     this._daten.Konfiguration.Bereiche = this._daten.Konfiguration.Bereiche.filter(
       (b) => (b || "").trim().toLowerCase() !== n.toLowerCase()
     );
+    delete this._daten.Konfiguration.BereichFarben[n];
     this.speichern();
   },
 
@@ -486,45 +532,11 @@ const LokaleEinstellungen = {
     localStorage.setItem(LOKALE_EINSTELLUNGEN_KEY, JSON.stringify(this._daten));
   },
 
-  getBereichFarbe(bereichName) {
-    if (!bereichName) return "";
-    return this._laden().bereichFarben[bereichName.trim()] || "";
-  },
-
-  setBereichFarbe(bereichName, hex) {
-    if (!bereichName || !bereichName.trim()) return;
-    const d = this._laden();
-    const key = bereichName.trim();
-    if (!hex) {
-      delete d.bereichFarben[key];
-    } else {
-      d.bereichFarben[key] = hex;
-    }
-    this._speichern();
-  },
-
-  renameBereichFarbe(altName, neuName) {
-    if (!altName || !altName.trim() || !neuName || !neuName.trim()) return;
-    const d = this._laden();
-    const altKey = altName.trim();
-    const neuKey = neuName.trim();
-    if (altKey === neuKey) return;
-    if (Object.prototype.hasOwnProperty.call(d.bereichFarben, altKey)) {
-      d.bereichFarben[neuKey] = d.bereichFarben[altKey];
-      delete d.bereichFarben[altKey];
-      this._speichern();
-    }
-  },
-
-  removeBereichFarbe(bereichName) {
-    if (!bereichName || !bereichName.trim()) return;
-    const d = this._laden();
-    const key = bereichName.trim();
-    if (Object.prototype.hasOwnProperty.call(d.bereichFarben, key)) {
-      delete d.bereichFarben[key];
-      this._speichern();
-    }
-  },
+  // Hinweis: Bereichsfarben werden seit der Datenbank-Migration über
+  // Store.getBereichFarbe()/Store.setBereichFarbe() verwaltet und mit
+  // Supabase synchronisiert. `bereichFarben` bleibt hier nur noch als
+  // Lesequelle für die einmalige Migration bestehender lokaler Farben
+  // (siehe Store._migriereLokaleBereichFarben) erhalten.
 
   getDarkMode() {
     return this._laden().darkMode ?? null;

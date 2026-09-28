@@ -230,7 +230,7 @@ const Dashboard = {
     const row = document.createElement("div");
     row.className = "aufgabe-row";
 
-    const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich) || "#888888";
+    const bereichFarbe = Store.getBereichFarbe(aufgabe.Bereich) || "#888888";
     row.style.borderLeftColor = bereichFarbe;
 
     const heute = heuteIso();

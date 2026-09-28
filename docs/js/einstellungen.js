@@ -73,7 +73,6 @@ const Einstellungen = {
 
       try {
         Store.renameBereich(this.ausgewaehlterBereich, neu);
-        LokaleEinstellungen.renameBereichFarbe(this.ausgewaehlterBereich, neu);
         this.ausgewaehlterBereich = neu;
         Anzeige.zeigeToast("Bereich umbenannt.");
         this.render();
@@ -88,7 +87,6 @@ const Einstellungen = {
 
       try {
         Store.deleteBereich(this.ausgewaehlterBereich);
-        LokaleEinstellungen.removeBereichFarbe(this.ausgewaehlterBereich);
         this.ausgewaehlterBereich = "";
         Anzeige.zeigeToast("Bereich gelöscht.");
         this.render();
@@ -200,7 +198,7 @@ const Einstellungen = {
   },
 
   // ---------------------------------------------------------------
-  // Bereichsfarben (geräteweise, siehe LokaleEinstellungen in store.js)
+  // Bereichsfarben (kontoweise, wird über Store mit Supabase synchronisiert)
   // ---------------------------------------------------------------
 
   _wireFarben() {
@@ -210,16 +208,15 @@ const Einstellungen = {
         return;
       }
 
-      LokaleEinstellungen.setBereichFarbe(this.ausgewaehlterBereich, this.ausgewaehlteFarbe);
+      Store.setBereichFarbe(this.ausgewaehlterBereich, this.ausgewaehlteFarbe);
       Anzeige.zeigeToast("Bereichsfarbe gespeichert.");
-      // Alle Listen (Dashboard, Aufgabenliste, Bereichsansicht) sofort mit der neuen Farbe neu zeichnen.
-      document.dispatchEvent(new CustomEvent("focus:datenGeaendert"));
+      // speichern() löst bereits "focus:datenGeaendert" aus und zeichnet alle Listen neu.
     });
   },
 
   _renderFarbOptionen() {
     const container = document.getElementById("einst-farbe-optionen");
-    const gespeichert = LokaleEinstellungen.getBereichFarbe(this.ausgewaehlterBereich);
+    const gespeichert = Store.getBereichFarbe(this.ausgewaehlterBereich);
     this.ausgewaehlteFarbe = gespeichert || "";
 
     container.innerHTML = "";

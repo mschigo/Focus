@@ -229,14 +229,13 @@ const heuteLiniePlugin = {
 };
 
 function ermittleProjektFarbe(bereichName, projektName) {
-  if (typeof LokaleEinstellungen === "undefined") return null;
+  if (typeof Store === "undefined") return null;
 
-  // 1. Prüfen, ob direkt im LocalStorage/LokaleEinstellungen eine Farbe für den Bereich oder das Projekt liegt
-  // Wir prüfen verschiedene Schlüssel-Varianten (Groß-/Kleinschreibung)
-  const einstellungen = LokaleEinstellungen._laden ? LokaleEinstellungen._laden() : {};
-  const farbenMap = einstellungen.bereichFarben || {};
+  // Bereichsfarben liegen in der Datenbank (Store.getBereichFarbe), mit
+  // Konto-übergreifender Synchronisation. Wir prüfen verschiedene
+  // Schlüssel-Varianten (Bereich oder Projektname, Groß-/Kleinschreibung).
+  const farbenMap = (Store._daten && Store._daten.Konfiguration && Store._daten.Konfiguration.BereichFarben) || {};
 
-  // Suche nach exakter Übereinstimmung oder Case-Insensitive
   for (const [key, val] of Object.entries(farbenMap)) {
     if (key.trim().toLowerCase() === (bereichName || "").trim().toLowerCase() ||
         key.trim().toLowerCase() === (projektName || "").trim().toLowerCase()) {
@@ -244,9 +243,8 @@ function ermittleProjektFarbe(bereichName, projektName) {
     }
   }
 
-  // Fallback über die Getter-Methode
   if (bereichName) {
-    const bColor = LokaleEinstellungen.getBereichFarbe(bereichName);
+    const bColor = Store.getBereichFarbe(bereichName);
     if (bColor) return bColor;
   }
 
