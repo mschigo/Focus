@@ -1,288 +1,248 @@
 /**
- * Focus Web – Datenmodell & Speicher.
- *
- * Datenformat entspricht exakt der aufgaben.json aus der MAUI-App
- * (siehe Models/AufgabeDto.cs, Models/Projekt.cs, Models/AufgabenDatenDatei.cs) –
- * die kompletten Daten liegen als ein JSON-Objekt in der Spalte "daten" einer
- * Zeile der Supabase-Tabelle "focus_daten" (eine Zeile pro angemeldetem Nutzer,
- * per Row-Level-Security abgesichert, siehe SQL aus dem Setup-Schritt).
- *
- * Architektur: Nach dem Login wird die Zeile einmal geladen und in einem
- * In-Memory-Zwischenspeicher (Store._daten) gehalten. Lesefunktionen
- * (getAufgaben/getBereiche/getProjekte) bleiben dadurch synchron und einfach
- * zu benutzen. Schreibende Funktionen aktualisieren den Zwischenspeicher
- * sofort (für eine reaktionsschnelle UI) und schreiben im Hintergrund nach
- * Supabase durch.
+ * Focus Web – Datenmodell & Speicher (store.js).
  */
 
-let tempNeueCheckliste = [];
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const App = {
-  _viewsInitialisiert: false,
+const Prioritaet = Object.freeze({
+  P1Dringend: "P1Dringend",
+  P2Wichtig: "P2Wichtig",
+  P3Normal: "P3Normal",
+  P4Spaeter: "P4Spaeter",
+});
 
-  async init() {
-    this._wireLoginForm();
-    this._wireAllgemeineUi();
-    this._wireNeueAufgabeForm();
+const PRIORITAET_REIHENFOLGE = [
+  Prioritaet.P1Dringend,
+  Prioritaet.P2Wichtig,
+  Prioritaet.P3Normal,
+  Prioritaet.P4Spaeter,
+];
 
-    Store.onAuthChange((eingeloggt) => {
-      if (eingeloggt) {
-        this._zeigeAppShell();
+const AufgabenStatus = Object.freeze({
+  Offen: "Offen",
+  InArbeit: "InArbeit",
+  Erledigt: "Erledigt",
+});
 
-        if (!this._viewsInitialisiert) {
-          this._viewsInitialisiert = true;
-          Dashboard.init();
-          Aufgabenliste.init();
-          Einstellungen.init();
-        } else {
-          Dashboard.render();
-          Einstellungen.render();
+function neueId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function heuteIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function wochenEndeIso(heute) {
+  const d = new Date(`${heute}T00:00:00`);
+  const dayOfWeek = d.getDay();
+  d.setDate(d.getDate() + (6 - dayOfWeek));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function normalisiereDaten(parsed) {
+  return {
+    Aufgaben: Array.isArray(parsed?.Aufgaben) ? parsed.Aufgaben : [],
+    Projekte: Array.isArray(parsed?.Projekte) ? parsed.Projekte : [],
+    Konfiguration: { Bereiche: Array.isArray(parsed?.Konfiguration?.Bereiche) ? parsed.Konfiguration.Bereiche : [] },
+  };
+}
+
+const Store = {
+  _daten: null,
+  _userId: null,
+  _authCallbacks: [],
+
+  onAuthChange(callback) {
+    this._authCallbacks.push(callback);
+  },
+
+  _notifyAuthChange(eingeloggt) {
+    for (const cb of this._authCallbacks) {
+      try { cb(eingeloggt); } catch (err) { console.error("Focus: Fehler in Auth-Callback.", err); }
+    }
+  },
+
+  async starteAuthUeberwachung() {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) console.error("Focus: Fehler beim Prüfen der Sitzung.", error);
+
+    if (data?.session) {
+      await this._ladeFuerNutzer(data.session.user.id);
+      this._notifyAuthChange(true);
+    } else {
+      this._notifyAuthChange(false);
+    }
+
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        try {
+          await this._ladeFuerNutzer(session.user.id);
+          this._notifyAuthChange(true);
+        } catch (err) {
+          console.error("Focus: Fehler beim Laden nach Login.", err);
         }
       } else {
-        this._zeigeLoginScreen();
-      }
-    });
-
-    try {
-      await Store.starteAuthUeberwachung();
-    } catch (err) {
-      console.error("Focus: Fehler beim Start.", err);
-      this._zeigeLoginScreen();
-      document.getElementById("login-error").textContent = "Verbindung zu Supabase fehlgeschlagen: " + err.message;
-    }
-  },
-
-  _wireAllgemeineUi() {
-    document.querySelectorAll(".tab-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (btn.disabled) return;
-        this.wechsleTab(btn.dataset.tab);
-      });
-    });
-
-    document.getElementById("details-popup-close")?.addEventListener("click", () => this.schliesseDetails());
-    document.getElementById("details-popup")?.addEventListener("click", (e) => {
-      if (e.target.id === "details-popup") this.schliesseDetails();
-    });
-
-    document.getElementById("logout-btn")?.addEventListener("click", async () => {
-      await Store.abmelden();
-    });
-  },
-
-  _wireNeueAufgabeForm() {
-    // Button auf Dashboard öffnet Popup
-    document.getElementById("dashboard-fab-neue-aufgabe")?.addEventListener("click", () => {
-      document.getElementById("neue-aufgabe-form").reset();
-      document.getElementById("neu-link").value = "";
-      tempNeueCheckliste = [];
-      this._renderNeueCheckliste();
-
-      const bereiche = Store.getBereiche();
-      const bereichSelect = document.getElementById("neu-bereich");
-      bereichSelect.innerHTML = bereiche.map(b => `<option value="${b}">${escapeHtml(b)}</option>`).join("");
-
-      this._updateNeuProjektDropdown();
-
-      document.getElementById("neue-aufgabe-popup").hidden = false;
-      document.getElementById("neu-titel").focus();
-    });
-
-    // Bereichsänderung aktualisiert Projekt-Dropdown
-    document.getElementById("neu-bereich")?.addEventListener("change", () => this._updateNeuProjektDropdown());
-
-    // Schließen / Abbrechen Handlers
-    const schliessePopup = () => {
-      document.getElementById("neue-aufgabe-popup").hidden = true;
-    };
-    document.getElementById("neue-aufgabe-popup-close")?.addEventListener("click", schliessePopup);
-    document.getElementById("neue-aufgabe-abbrechen-btn")?.addEventListener("click", schliessePopup);
-
-    // Checklistenpunkt hinzufügen Button
-    document.getElementById("neu-checkliste-add-btn")?.addEventListener("click", () => {
-      const input = document.getElementById("neu-checkliste-input");
-      const text = input.value.trim();
-      if (text) {
-        tempNeueCheckliste.push({
-          Id: neueId(),
-          Titel: text,
-          IstErledigt: false
-        });
-        input.value = "";
-        this._renderNeueCheckliste();
-      }
-    });
-
-    // Enter-Taste im Checklisten-Input abfangen
-    document.getElementById("neu-checkliste-input")?.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        document.getElementById("neu-checkliste-add-btn").click();
-      }
-    });
-
-    // Formular Absenden
-    document.getElementById("neue-aufgabe-form")?.addEventListener("submit", (e) => {
-      e.preventDefault();
-
-      const titel = document.getElementById("neu-titel").value.trim();
-      if (!titel) return;
-
-      const bereich = document.getElementById("neu-bereich").value;
-      const projektName = document.getElementById("neu-projekt").value;
-
-      // 1. ProjektId aus dem Store abrufen (oder Projekt bei Bedarf anlegen)
-      let projekte = Store.getProjekte(bereich);
-      let projekt = projekte.find(p => p.Name === projektName);
-
-      if (!projekt) {
-        // Falls Projekt nicht existiert, im Store anlegen
-        try {
-          projekt = Store.addProjekt(bereich, projektName || "Allgemein");
-        } catch (err) {
-          projekte = Store.getProjekte(bereich);
-          projekt = projekte[0];
-        }
-      }
-
-      if (!projekt) {
-        Anzeige.zeigeToast("Ungültiges Projekt gewählt.", true);
-        return;
-      }
-
-      // 2. Objektstruktur exakt nach aufgaben.json DTO aufbauen
-      const neueAufgabe = {
-        Id: neueId(),
-        Titel: titel,
-        ProjektId: projekt.Id,
-        Prioritaet: document.getElementById("neu-prioritaet").value,
-        Faelligkeit: document.getElementById("neu-faelligkeit").value || null,
-        Notizen: document.getElementById("neu-notizen").value || "",
-        Link: document.getElementById("neu-link").value || "",
-        Status: AufgabenStatus.Offen,
-        Checkliste: [...tempNeueCheckliste],
-      };
-
-      try {
-        // 3. Korrekte Funktion aus store.js aufrufen
-        Store.addOrUpdateAufgabe(neueAufgabe);
-
-        tempNeueCheckliste = [];
-        Anzeige.zeigeToast("Aufgabe erstellt.");
-        schliessePopup();
-      } catch (err) {
-        console.error("Fehler beim Speichern der Aufgabe:", err);
-        Anzeige.zeigeToast("Fehler: " + err.message, true);
+        this._daten = null;
+        this._userId = null;
+        this._notifyAuthChange(false);
       }
     });
   },
 
-  _updateNeuProjektDropdown() {
-    const bereich = document.getElementById("neu-bereich").value;
-    const projekte = Store.getProjekte(bereich);
-    const projektSelect = document.getElementById("neu-projekt");
-
-    if (projekte.length === 0) {
-      projektSelect.innerHTML = `<option value="Allgemein">Allgemein</option>`;
-    } else {
-      projektSelect.innerHTML = projekte.map(p => `<option value="${p.Name}">${escapeHtml(p.Name)}</option>`).join("");
-    }
+  async anmelden(email, passwort) {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password: passwort });
+    if (error) throw error;
   },
 
-  _renderNeueCheckliste() {
-    const container = document.getElementById("neu-checkliste-container");
-    container.innerHTML = "";
+  async registrieren(email, passwort) {
+    const { error } = await supabaseClient.auth.signUp({ email, password: passwort });
+    if (error) throw error;
+  },
 
-    if (tempNeueCheckliste.length === 0) {
-      container.innerHTML = `<span style="font-size: 13px; color: var(--color-text-muted);">Noch keine Punkte.</span>`;
+  async abmelden() {
+    await supabaseClient.auth.signOut();
+  },
+
+  async _ladeFuerNutzer(userId) {
+    this._userId = userId;
+
+    const { data, error } = await supabaseClient
+      .from("focus_daten")
+      .select("daten")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data && data.daten) {
+      this._daten = normalisiereDaten(data.daten);
       return;
     }
 
-    tempNeueCheckliste.forEach((punkt, index) => {
-      const row = document.createElement("div");
-      row.className = "checkliste-item";
-      row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 4px 0;";
+    this._daten = { Aufgaben: [], Projekte: [], Konfiguration: { Bereiche: ["Arbeit", "Privat"] } };
+    await supabaseClient.from("focus_daten").insert({ user_id: userId, daten: this._daten });
+  },
 
-      const punktText = punkt.Titel || punkt.Text || punkt.text || "";
+  speichern() {
+    document.dispatchEvent(new CustomEvent("focus:datenGeaendert"));
+    this._persistiereImHintergrund();
+  },
 
-      row.innerHTML = `
-        <span style="font-size: 13px;">${escapeHtml(punktText)}</span>
-        <button type="button" class="icon-btn" title="Löschen" data-index="${index}">✕</button>
-      `;
+  async _persistiereImHintergrund() {
+    if (!this._userId) return;
 
-      row.querySelector("button").addEventListener("click", (e) => {
-        const idx = e.target.getAttribute("data-index");
-        tempNeueCheckliste.splice(idx, 1);
-        this._renderNeueCheckliste();
-      });
+    const { error } = await supabaseClient
+      .from("focus_daten")
+      .update({ daten: this._daten, aktualisiert_am: nowIso() })
+      .eq("user_id", this._userId);
 
-      container.appendChild(row);
+    if (error && typeof Anzeige !== "undefined") {
+      Anzeige.zeigeToast("Speichern fehlgeschlagen: " + error.message, true);
+    }
+  },
+
+  _pruefeGeladen() {
+    if (!this._daten) throw new Error("Daten sind noch nicht geladen.");
+  },
+
+  getAufgaben() {
+    this._pruefeGeladen();
+    const projektLookup = new Map(this._daten.Projekte.map((p) => [p.Id, p]));
+    const heute = heuteIso();
+
+    return this._daten.Aufgaben.map((a) => {
+      const projekt = projektLookup.get(a.ProjektId);
+      const istAktiv = a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit;
+
+      return {
+        ...a,
+        Bereich: projekt ? projekt.Bereich : "",
+        ProjektName: projekt ? projekt.Name : "",
+        IstAktiv: istAktiv,
+        Checkliste: a.Checkliste || []
+      };
     });
   },
 
-  _wireLoginForm() {
-    const form = document.getElementById("login-form");
-    const modusToggle = document.getElementById("login-modus-toggle");
-    const submitBtn = document.getElementById("login-submit-btn");
-    const fehlerEl = document.getElementById("login-error");
-    let modus = "signin";
-
-    modusToggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      modus = modus === "signin" ? "signup" : "signin";
-      submitBtn.textContent = modus === "signin" ? "Anmelden" : "Konto erstellen";
-      modusToggle.textContent = modus === "signin" ? "Neu hier? Konto erstellen" : "Bereits ein Konto? Anmelden";
-      fehlerEl.textContent = "";
-    });
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("login-email").value.trim();
-      const passwort = document.getElementById("login-passwort").value;
-      fehlerEl.textContent = "";
-      submitBtn.disabled = true;
-
-      try {
-        if (modus === "signin") {
-          await Store.anmelden(email, passwort);
-        } else {
-          await Store.registrieren(email, passwort);
-          fehlerEl.style.color = "";
-          fehlerEl.textContent = "Konto erstellt. Falls E-Mail-Bestätigung aktiv ist, bitte den Link in der Mail bestätigen und dich danach anmelden.";
-        }
-      } catch (err) {
-        fehlerEl.style.color = "var(--color-p1)";
-        fehlerEl.textContent = err.message;
-      } finally {
-        submitBtn.disabled = false;
-      }
-    });
+  getBereiche() {
+    this._pruefeGeladen();
+    return this._daten.Konfiguration.Bereiche;
   },
 
-  _zeigeLoginScreen() {
-    document.getElementById("loading-screen").hidden = true;
-    document.getElementById("app-shell").hidden = true;
-    document.getElementById("login-screen").hidden = false;
+  getProjekte(bereich = null) {
+    this._pruefeGeladen();
+    let liste = this._daten.Projekte;
+    if (bereich && bereich.trim()) {
+      const b = bereich.trim().toLowerCase();
+      liste = liste.filter((p) => (p.Bereich || "").trim().toLowerCase() === b);
+    }
+    return [...liste].sort((a, b) => a.Name.localeCompare(b.Name, "de"));
   },
 
-  _zeigeAppShell() {
-    document.getElementById("loading-screen").hidden = true;
-    document.getElementById("login-screen").hidden = true;
-    document.getElementById("app-shell").hidden = false;
+  addOrUpdateAufgabe(aufgabe) {
+    this._pruefeGeladen();
+
+    if (!aufgabe.ProjektId || !this._daten.Projekte.some((p) => p.Id === aufgabe.ProjektId)) {
+      throw new Error("Die Aufgabe muss einem gültigen Projekt zugeordnet sein.");
+    }
+
+    const now = nowIso();
+    const index = this._daten.Aufgaben.findIndex((a) => a.Id === aufgabe.Id);
+
+    if (index === -1) {
+      const neu = {
+        Id: aufgabe.Id || neueId(),
+        Titel: aufgabe.Titel,
+        ProjektId: aufgabe.ProjektId,
+        Prioritaet: aufgabe.Prioritaet || Prioritaet.P3Normal,
+        Status: aufgabe.Status || AufgabenStatus.Offen,
+        Faelligkeit: aufgabe.Faelligkeit || null,
+        Notizen: aufgabe.Notizen || "",
+        Link: aufgabe.Link || "",
+        Checkliste: aufgabe.Checkliste || [],
+        ErstelltAm: now,
+        GeaendertAm: now,
+      };
+      this._daten.Aufgaben.push(neu);
+    } else {
+      const bestehend = this._daten.Aufgaben[index];
+      this._daten.Aufgaben[index] = {
+        ...bestehend,
+        Titel: aufgabe.Titel,
+        ProjektId: aufgabe.ProjektId,
+        Prioritaet: aufgabe.Prioritaet,
+        Status: aufgabe.Status,
+        Faelligkeit: aufgabe.Faelligkeit || null,
+        Notizen: aufgabe.Notizen || "",
+        Link: aufgabe.Link || "",
+        Checkliste: aufgabe.Checkliste || [],
+        GeaendertAm: now,
+      };
+    }
+
+    this.speichern();
   },
 
-  wechsleTab(tab) {
-    document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("is-active", btn.dataset.tab === tab));
-    document.querySelectorAll(".view").forEach((view) => view.classList.toggle("is-active", view.id === `view-${tab}`));
-  },
+  addProjekt(bereich, name) {
+    this._pruefeGeladen();
+    const b = bereich.trim();
+    const n = name.trim();
 
-  oeffneDetails(aufgabeId) {
-    Aufgabenliste.oeffneBearbeitenPopup(aufgabeId);
-  },
-
-  schliesseDetails() {
-    document.getElementById("details-popup").hidden = true;
-  },
+    const projekt = { Id: neueId(), Name: n, Bereich: b };
+    this._daten.Projekte.push(projekt);
+    this.speichern();
+    return projekt;
+  }
 };
-
-document.addEventListener("DOMContentLoaded", () => App.init());
