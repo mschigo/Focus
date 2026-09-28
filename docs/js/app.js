@@ -92,6 +92,9 @@ const App = {
       const istEl = document.getElementById("neu-istzeit");
       if (istEl) istEl.value = "";
 
+      const startEl = document.getElementById("neu-startdatum");
+      if (startEl) startEl.value = "";
+
       tempNeueCheckliste = [];
       this._renderNeueCheckliste();
 
@@ -175,6 +178,7 @@ const App = {
         Titel: titel,
         ProjektId: projekt.Id,
         Prioritaet: document.getElementById("neu-prioritaet")?.value || Prioritaet.P3Normal,
+        Startdatum: document.getElementById("neu-startdatum")?.value || null,
         Faelligkeit: document.getElementById("neu-faelligkeit")?.value || null,
         Notizen: document.getElementById("neu-notizen")?.value || "",
         Link: document.getElementById("neu-link")?.value || "",
