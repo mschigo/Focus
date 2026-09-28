@@ -36,24 +36,31 @@ const Aufgabenliste = {
     if (popup) popup.hidden = false;
   },
 
-  _berechneNeueZeit(altWert, eingabe) {
-    const str = eingabe.trim().replace(",", ".");
-    if (!str) return altWert;
+  // Hilfsfunktion zum Berechnen von Ausdrücken wie "+2", "2+1", "3-0.5", "2*1.5", "4/2"
+  _wertBerechnen(basisWert, eingabe) {
+    if (eingabe === undefined || eingabe === null) return basisWert;
+    let str = String(eingabe).trim().replace(",", ".");
+    if (!str) return 0;
 
-    const op = str.charAt(0);
-    const val = parseFloat(str.substring(1));
-
-    if (["+", "-", "*", "/"].includes(op) && !isNaN(val)) {
-      let ergebnis = altWert;
-      if (op === "+") ergebnis += val;
-      if (op === "-") ergebnis -= val;
-      if (op === "*") ergebnis *= val;
-      if (op === "/") ergebnis = val !== 0 ? ergebnis / val : ergebnis;
-      return Math.max(0, Math.round(ergebnis * 100) / 100);
+    // Wenn die Eingabe mit +, -, * oder / beginnt, hängen wir den Basiswert davor (z. B. "+2" -> "2+2")
+    if (["+", "-", "*", "/"].includes(str.charAt(0))) {
+      str = basisWert + str;
     }
 
-    const direktWert = parseFloat(str);
-    return isNaN(direktWert) ? altWert : Math.max(0, direktWert);
+    try {
+      // Sichere Auswertung einfacher mathematischer Ausdrücke
+      if (/^[0-9\.\+\-\*\/\s\(\)]+$/.test(str)) {
+        const ergebnis = Function(`"use strict"; return (${str})`)();
+        if (typeof ergebnis === "number" && !isNaN(ergebnis) && isFinite(ergebnis)) {
+          return Math.max(0, Math.round(ergebnis * 100) / 100);
+        }
+      }
+    } catch (e) {
+      console.warn("Ungültiger Rechenausdruck:", str);
+    }
+
+    const direktNummer = parseFloat(str);
+    return isNaN(direktNummer) ? basisWert : Math.max(0, direktNummer);
   },
 
   _renderPopupInhalt(aufgabe) {
@@ -62,6 +69,9 @@ const Aufgabenliste = {
 
     const bereiche = Store.getBereiche();
     const aktuellerBereich = aufgabe.Bereich || bereiche[0] || "";
+
+    let aktuellerIstWert = parseFloat(aufgabe.IstZeit) || 0;
+    let aktuellerSollWert = parseFloat(aufgabe.SollZeit) || 0;
 
     body.innerHTML = `
       <form id="edit-aufgabe-form" class="aufgabe-form">
@@ -104,15 +114,15 @@ const Aufgabenliste = {
           </div>
         </div>
 
-        <!-- Zeiterfassungs-Felder (type="text", damit Rechenzeichen eingegeben werden können) -->
+        <!-- Zeiterfassungs-Felder als Textfeld für Rechnungen -->
         <div class="form-row">
           <div class="form-field">
             <label for="edit-sollzeit">Soll-Zeit (Std.)</label>
-            <input type="text" id="edit-sollzeit" class="form-input" placeholder="z. B. 2.5 oder +1" value="${aufgabe.SollZeit || ""}" />
+            <input type="text" id="edit-sollzeit" class="form-input" placeholder="z. B. 3 oder +1" value="${aktuellerSollWert || ""}" />
           </div>
           <div class="form-field">
             <label for="edit-istzeit">Ist-Zeit (Std.)</label>
-            <input type="text" id="edit-istzeit" class="form-input" placeholder="z. B. 1.0 oder +0.5" value="${aufgabe.IstZeit || ""}" />
+            <input type="text" id="edit-istzeit" class="form-input" placeholder="z. B. 2 oder +0.5" value="${aktuellerIstWert || ""}" />
           </div>
         </div>
 
@@ -161,23 +171,36 @@ const Aufgabenliste = {
     bereichSelect.addEventListener("change", ladeProjekte);
     ladeProjekte();
 
-    // Automatische Rechnungs-Auswertung für Ist-Zeit und Soll-Zeit beim Verlassen (blur)
-    let aktuellerIstWert = parseFloat(aufgabe.IstZeit) || 0;
-    let aktuellerSollWert = parseFloat(aufgabe.SollZeit) || 0;
-
+    // Automatische Auswertung beim Verlassen des Feldes (blur) oder Drücken von Enter
     const istInput = document.getElementById("edit-istzeit");
     if (istInput) {
-      istInput.addEventListener("blur", () => {
-        aktuellerIstWert = this._berechneNeueZeit(aktuellerIstWert, istInput.value);
+      const verarbeiteIstZeit = () => {
+        aktuellerIstWert = this._wertBerechnen(aktuellerIstWert, istInput.value);
         istInput.value = aktuellerIstWert > 0 ? aktuellerIstWert : "";
+      };
+
+      istInput.addEventListener("blur", verarbeiteIstZeit);
+      istInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          verarbeiteIstZeit();
+        }
       });
     }
 
     const sollInput = document.getElementById("edit-sollzeit");
     if (sollInput) {
-      sollInput.addEventListener("blur", () => {
-        aktuellerSollWert = this._berechneNeueZeit(aktuellerSollWert, sollInput.value);
+      const verarbeiteSollZeit = () => {
+        aktuellerSollWert = this._wertBerechnen(aktuellerSollWert, sollInput.value);
         sollInput.value = aktuellerSollWert > 0 ? aktuellerSollWert : "";
+      };
+
+      sollInput.addEventListener("blur", verarbeiteSollZeit);
+      sollInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          verarbeiteSollZeit();
+        }
       });
     }
 
@@ -242,15 +265,12 @@ const Aufgabenliste = {
     // Formular Absenden (Speichern)
     document.getElementById("edit-aufgabe-form")?.addEventListener("submit", (e) => {
       e.preventDefault();
-      
-      // Vor dem Speichern sicherstellen, dass offene Berechnungen verarbeitet sind
+
       if (istInput) {
-        aktuellerIstWert = this._berechneNeueZeit(aktuellerIstWert, istInput.value);
-        istInput.value = aktuellerIstWert > 0 ? aktuellerIstWert : "";
+        aktuellerIstWert = this._wertBerechnen(aktuellerIstWert, istInput.value);
       }
       if (sollInput) {
-        aktuellerSollWert = this._berechneNeueZeit(aktuellerSollWert, sollInput.value);
-        sollInput.value = aktuellerSollWert > 0 ? aktuellerSollWert : "";
+        aktuellerSollWert = this._wertBerechnen(aktuellerSollWert, sollInput.value);
       }
 
       this._speichern(aufgabe.Id, aktuellerSollWert, aktuellerIstWert);
