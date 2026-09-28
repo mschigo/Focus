@@ -170,17 +170,21 @@ function rendereGantt() {
     const titel = a.Titel;
     const faellig = a.Faelligkeit;
     
-    let start = faellig;
-    if (a.ErstelltAm && datumRegex.test(a.ErstelltAm.substring(0, 10))) {
+    // 1. Priorität: Explizit eingetragenes Startdatum
+    let start = a.Startdatum && datumRegex.test(a.Startdatum) ? a.Startdatum : null;
+
+    // 2. Fallback: Erstellungsdatum nutzen, wenn es vor oder am Fälligkeitsdatum liegt
+    if (!start && a.ErstelltAm && datumRegex.test(a.ErstelltAm.substring(0, 10))) {
       const ers = a.ErstelltAm.substring(0, 10);
       if (ers <= faellig) {
         start = ers;
       }
     }
 
-    if (start === faellig) {
+    // 3. Fallback: Wenn immer noch kein Start oder Start >= Fälligkeit -> 1 Tag vor Fälligkeit setzen
+    if (!start || start >= faellig) {
       const d = new Date(faellig);
-      d.setDate(d.getDate() - 2);
+      d.setDate(d.getDate() - 1);
       start = d.toISOString().substring(0, 10);
     }
 
