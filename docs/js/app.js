@@ -47,12 +47,12 @@ const App = {
       });
     });
 
-    document.getElementById("details-popup-close").addEventListener("click", () => this.schliesseDetails());
-    document.getElementById("details-popup").addEventListener("click", (e) => {
+    document.getElementById("details-popup-close")?.addEventListener("click", () => this.schliesseDetails());
+    document.getElementById("details-popup")?.addEventListener("click", (e) => {
       if (e.target.id === "details-popup") this.schliesseDetails();
     });
 
-    document.getElementById("logout-btn").addEventListener("click", async () => {
+    document.getElementById("logout-btn")?.addEventListener("click", async () => {
       await Store.abmelden();
     });
   },
@@ -90,7 +90,16 @@ const App = {
       const input = document.getElementById("neu-checkliste-input");
       const text = input.value.trim();
       if (text) {
-        tempNeueCheckliste.push({ Id: crypto.randomUUID(), Text: text, IstErledigt: false });
+        const itemUuid = crypto.randomUUID();
+        tempNeueCheckliste.push({
+          Id: itemUuid,
+          id: itemUuid,
+          Text: text,
+          text: text,
+          IstErledigt: false,
+          erledigt: false,
+          isDone: false
+        });
         input.value = "";
         this._renderNeueCheckliste();
       }
@@ -121,13 +130,14 @@ const App = {
         Notizen: document.getElementById("neu-notizen").value || "",
         Link: document.getElementById("neu-link").value || "",
         Status: "Offen",
-        Checkliste: tempNeueCheckliste,
+        Checkliste: [...tempNeueCheckliste],
         ErstelltAm: new Date().toISOString(),
         GeaendertAm: new Date().toISOString(),
         IstAktiv: true
       };
 
       await Store.addAufgabe(neueAufgabe);
+      tempNeueCheckliste = [];
       if (typeof Toast !== "undefined") Toast.show("Aufgabe erstellt.");
       schliessePopup();
     });
@@ -158,8 +168,7 @@ const App = {
       const row = document.createElement("div");
       row.className = "checkliste-item";
       row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 4px 0;";
-      
-      // Nutzt den Text-Wert unabhängig davon, ob er als .Text oder .text hinterlegt ist
+
       const punktText = punkt.Text || punkt.text || "";
 
       row.innerHTML = `
@@ -176,6 +185,7 @@ const App = {
       container.appendChild(row);
     });
   },
+
   _wireLoginForm() {
     const form = document.getElementById("login-form");
     const modusToggle = document.getElementById("login-modus-toggle");
