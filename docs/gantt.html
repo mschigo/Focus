@@ -5,14 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Focus – Gantt Chart</title>
   <link rel="stylesheet" href="style.css" />
+  
+  <!-- Hammer.js (Zwingend erforderlich für Panning / Drag & Drop in Chart.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  
   <!-- Chart.js, Date-Adapter & Zoom-Plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+
   <style>
     /* Grab-Cursor für intuitives Verschieben */
     #gantt-chart {
       cursor: grab;
+      touch-action: pan-x;
     }
     #gantt-chart:active {
       cursor: grabbing;
@@ -36,7 +42,7 @@
 
   <main id="app-main" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
     
-    <!-- Filterleiste -->
+    <!-- Filterleiste & Reset-Button -->
     <div class="filter-row" style="margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
       <div class="filter-group">
         <label class="filter-group__label" for="filter-bereich">Bereich</label>
@@ -50,6 +56,10 @@
         <select id="filter-projekt" class="form-input" style="min-width: 160px;">
           <option value="Alle">Alle Projekte</option>
         </select>
+      </div>
+
+      <div class="filter-group" style="margin-left: auto;">
+        <button type="button" id="btn-reset-zoom" class="btn-secondary">Ansicht zurücksetzen</button>
       </div>
     </div>
 
@@ -94,6 +104,12 @@ async function initGantt() {
 
   document.getElementById("filter-projekt").addEventListener("change", () => {
     rendereGantt();
+  });
+
+  document.getElementById("btn-reset-zoom").addEventListener("click", () => {
+    if (ganttChart) {
+      ganttChart.resetZoom();
+    }
   });
 }
 
@@ -182,7 +198,7 @@ function rendereGantt() {
     // 1. Priorität: Explizit eingetragenes Startdatum
     let start = a.Startdatum && datumRegex.test(a.Startdatum) ? a.Startdatum : null;
 
-    // 2. Fallback: Erstellungsdatum nutzen, wenn es vor oder am Fälligkeitsdatum liegt
+    // 2. Fallback: Erstellungsdatum
     if (!start && a.ErstelltAm && datumRegex.test(a.ErstelltAm.substring(0, 10))) {
       const ers = a.ErstelltAm.substring(0, 10);
       if (ers <= faellig) {
@@ -190,7 +206,7 @@ function rendereGantt() {
       }
     }
 
-    // 3. Fallback: Wenn immer noch kein Start oder Start >= Fälligkeit -> 1 Tag vor Fälligkeit setzen
+    // 3. Fallback: 1 Tag vor Fälligkeit
     if (!start || start >= faellig) {
       const d = new Date(faellig);
       d.setDate(d.getDate() - 1);
@@ -229,10 +245,6 @@ function rendereGantt() {
       indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: "nearest",
-        intersect: false
-      },
       scales: {
         x: {
           type: "time",
@@ -267,8 +279,7 @@ function rendereGantt() {
         zoom: {
           pan: {
             enabled: true,
-            mode: "x",
-            threshold: 5
+            mode: "x"
           },
           zoom: {
             wheel: { enabled: true },
