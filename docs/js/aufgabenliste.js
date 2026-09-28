@@ -141,6 +141,28 @@ const Aufgabenliste = {
     bereichSelect.addEventListener("change", ladeProjekte);
     ladeProjekte();
 
+    // Automatische Synchronisation der Datumsfelder im Bearbeiten-Popup
+    const editStartInput = document.getElementById("edit-startdatum");
+    const editFaelligInput = document.getElementById("edit-faelligkeit");
+    let editStartManuell = Boolean(aufgabe.Startdatum);
+    let editFaelligManuell = Boolean(aufgabe.Faelligkeit);
+
+    if (editStartInput && editFaelligInput) {
+      editStartInput.addEventListener("input", () => {
+        editStartManuell = true;
+        if (!editFaelligManuell || !editFaelligInput.value) {
+          editFaelligInput.value = editStartInput.value;
+        }
+      });
+
+      editFaelligInput.addEventListener("input", () => {
+        editFaelligManuell = true;
+        if (!editStartManuell || !editStartInput.value) {
+          editStartInput.value = editFaelligInput.value;
+        }
+      });
+    }
+
     // Checklisten-Punkt hinzufügen
     document.getElementById("edit-checkliste-add-btn")?.addEventListener("click", () => {
       const input = document.getElementById("edit-checkliste-neu");
@@ -281,6 +303,11 @@ const Aufgabenliste = {
     const prioritaetChip = document.querySelector("#edit-prioritaet-chips .chip.is-selected");
     const prioritaet = prioritaetChip ? prioritaetChip.dataset.prioritaet : Prioritaet.P3Normal;
 
+    let finalStart = document.getElementById("edit-startdatum")?.value || null;
+    let finalFaellig = document.getElementById("edit-faelligkeit")?.value || null;
+    if (finalFaellig && !finalStart) finalStart = finalFaellig;
+    if (finalStart && !finalFaellig) finalFaellig = finalStart;
+
     try {
       Store.addOrUpdateAufgabe({
         Id: aufgabeId,
@@ -288,8 +315,8 @@ const Aufgabenliste = {
         ProjektId: projektId,
         Prioritaet: prioritaet,
         Status: document.getElementById("edit-status")?.value || AufgabenStatus.Offen,
-        Startdatum: document.getElementById("edit-startdatum")?.value || null,
-        Faelligkeit: document.getElementById("edit-faelligkeit")?.value || null,
+        Startdatum: finalStart,
+        Faelligkeit: finalFaellig,
         SollZeit: parseFloat(document.getElementById("edit-sollzeit")?.value) || 0,
         IstZeit: parseFloat(document.getElementById("edit-istzeit")?.value) || 0,
         Notizen: document.getElementById("edit-notizen")?.value.trim() || "",
