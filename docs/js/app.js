@@ -82,9 +82,16 @@ const App = {
     // Button auf Dashboard öffnet Popup
     document.getElementById("dashboard-fab-neue-aufgabe")?.addEventListener("click", () => {
       document.getElementById("neue-aufgabe-form").reset();
+      
       const linkEl = document.getElementById("neu-link");
       if (linkEl) linkEl.value = "";
-      
+
+      const sollEl = document.getElementById("neu-sollzeit");
+      if (sollEl) sollEl.value = "";
+
+      const istEl = document.getElementById("neu-istzeit");
+      if (istEl) istEl.value = "";
+
       tempNeueCheckliste = [];
       this._renderNeueCheckliste();
 
@@ -171,6 +178,8 @@ const App = {
         Faelligkeit: document.getElementById("neu-faelligkeit")?.value || null,
         Notizen: document.getElementById("neu-notizen")?.value || "",
         Link: document.getElementById("neu-link")?.value || "",
+        SollZeit: parseFloat(document.getElementById("neu-sollzeit")?.value) || 0,
+        IstZeit: parseFloat(document.getElementById("neu-istzeit")?.value) || 0,
         Status: AufgabenStatus.Offen,
         Checkliste: [...tempNeueCheckliste],
       };
