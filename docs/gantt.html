@@ -23,6 +23,21 @@
     #gantt-chart:active {
       cursor: grabbing;
     }
+
+    /* Vollbild-Styling für den Card-Container */
+    .card:fullscreen {
+      background-color: var(--color-bg, #1e1e1e);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+    .card:fullscreen .gantt-container {
+      height: 85vh !important;
+    }
   </style>
 </head>
 <body>
@@ -42,7 +57,7 @@
 
   <main id="app-main" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
     
-    <!-- Filterleiste & Reset-Button -->
+    <!-- Filterleiste & Steuerung -->
     <div class="filter-row" style="margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
       <div class="filter-group">
         <label class="filter-group__label" for="filter-bereich">Bereich</label>
@@ -58,18 +73,19 @@
         </select>
       </div>
 
-      <div class="filter-group" style="margin-left: auto;">
+      <div class="filter-group" style="margin-left: auto; display: flex; gap: 8px;">
         <button type="button" id="btn-reset-zoom" class="btn-secondary">Ansicht zurücksetzen</button>
+        <button type="button" id="btn-fullscreen" class="btn-secondary">⛶ Vollbild</button>
       </div>
     </div>
 
     <!-- Gantt Chart Karte -->
-    <div class="card" style="margin-bottom: 24px;">
+    <div class="card" id="gantt-card" style="margin-bottom: 24px;">
       <h2 class="card-title">Projekt-Timeline (Fälligkeiten & Zeiträume)</h2>
       <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -8px; margin-bottom: 12px;">
         💡 Hinweis: Ziehe mit <strong>gedrückter Maustaste</strong>, um die Zeitleiste zu verschieben. Nutze das <strong>Mausrad zum Zoomen</strong>.
       </p>
-      <div style="position: relative; height: 450px; width: 100%;">
+      <div class="gantt-container" style="position: relative; height: 450px; width: 100%;">
         <canvas id="gantt-chart"></canvas>
       </div>
     </div>
@@ -109,6 +125,22 @@ async function initGantt() {
   document.getElementById("btn-reset-zoom").addEventListener("click", () => {
     if (ganttChart) {
       ganttChart.resetZoom();
+    }
+  });
+
+  // Vollbild-Steuerung
+  document.getElementById("btn-fullscreen").addEventListener("click", () => {
+    const card = document.getElementById("gantt-card");
+    if (!document.fullscreenElement) {
+      if (card.requestFullscreen) {
+        card.requestFullscreen();
+      } else if (card.webkitRequestFullscreen) {
+        card.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
     }
   });
 }
@@ -195,7 +227,7 @@ function rendereGantt() {
     const titel = a.Titel;
     const faellig = a.Faelligkeit;
     
-    // 1. Priorität: Explizit eingetragenes Startdatum
+    // 1. Priorität: Explizites Startdatum
     let start = a.Startdatum && datumRegex.test(a.Startdatum) ? a.Startdatum : null;
 
     // 2. Fallback: Erstellungsdatum
