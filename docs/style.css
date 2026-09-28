@@ -473,7 +473,25 @@ main {
 
 @media (max-width: 600px) {
   .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .kpi-card {
+    padding: 8px 8px;
+  }
+
+  .kpi-card__value {
+    font-size: 18px;
+  }
+
+  .kpi-card__label {
+    font-size: 10px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
