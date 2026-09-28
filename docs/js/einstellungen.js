@@ -83,12 +83,26 @@ const Einstellungen = {
 
     document.getElementById("einst-bereich-loeschen-btn").addEventListener("click", () => {
       if (!this.ausgewaehlterBereich) return;
-      if (!window.confirm(`Bereich "${this.ausgewaehlterBereich}" wirklich löschen?`)) return;
+
+      const bereichName = this.ausgewaehlterBereich;
+      const projekte = Store.getProjekte(bereichName);
+      const projektIds = new Set(projekte.map((p) => p.Id));
+      const anzahlAufgaben = Store.getAufgaben().filter((a) => projektIds.has(a.ProjektId)).length;
+
+      const ersteFrage = projekte.length > 0
+        ? `Der Bereich "${bereichName}" enthält ${projekte.length} Projekt(e) mit insgesamt ${anzahlAufgaben} Aufgabe(n).\n\nBeim Löschen werden ALLE zugehörigen Projekte und Aufgaben unwiderruflich mitgelöscht. Fortfahren?`
+        : `Bereich "${bereichName}" wirklich löschen?`;
+
+      if (!window.confirm(ersteFrage)) return;
+
+      // Zweite, endgültige Bestätigung – insbesondere wichtig, weil dabei
+      // auch alle Projekte und Aufgaben des Bereichs gelöscht werden.
+      if (!window.confirm(`Letzte Bestätigung: Bereich "${bereichName}" jetzt endgültig löschen?`)) return;
 
       try {
-        Store.deleteBereich(this.ausgewaehlterBereich);
+        Store.deleteBereich(bereichName, true);
         this.ausgewaehlterBereich = "";
-        Anzeige.zeigeToast("Bereich gelöscht.");
+        Anzeige.zeigeToast("Bereich inkl. Projekten und Aufgaben gelöscht.");
         this.render();
       } catch (err) {
         Anzeige.zeigeToast(err.message, true);

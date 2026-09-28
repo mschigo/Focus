@@ -417,14 +417,26 @@ const Store = {
     this.speichern();
   },
 
-  deleteBereich(name) {
+  // `kaskade = true`: löscht auch alle Projekte des Bereichs (und deren
+  // Aufgaben) mit. Ohne `kaskade` wird wie bisher ein Fehler geworfen,
+  // solange der Bereich noch Projekte enthält.
+  deleteBereich(name, kaskade = false) {
     this._pruefeGeladen();
     if (!name || !name.trim()) return;
 
     const n = name.trim();
+    const projekteImBereich = this._daten.Projekte.filter(
+      (p) => (p.Bereich || "").trim().toLowerCase() === n.toLowerCase()
+    );
 
-    if (this._daten.Projekte.some((p) => p.Bereich.toLowerCase() === n.toLowerCase())) {
+    if (projekteImBereich.length > 0 && !kaskade) {
       throw new Error(`Der Bereich "${n}" hat noch Projekte und kann nicht gelöscht werden.`);
+    }
+
+    if (projekteImBereich.length > 0) {
+      const projektIds = new Set(projekteImBereich.map((p) => p.Id));
+      this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => !projektIds.has(a.ProjektId));
+      this._daten.Projekte = this._daten.Projekte.filter((p) => !projektIds.has(p.Id));
     }
 
     this._daten.Konfiguration.Bereiche = this._daten.Konfiguration.Bereiche.filter(
