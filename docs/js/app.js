@@ -120,8 +120,10 @@ const App = {
       const titel = document.getElementById("neu-titel").value.trim();
       if (!titel) return;
 
+      const generierteId = crypto.randomUUID();
+
       const neueAufgabe = {
-        Id: crypto.randomUUID(),
+        Id: generierteId,
         Titel: titel,
         Bereich: document.getElementById("neu-bereich").value,
         ProjektName: document.getElementById("neu-projekt").value,
@@ -136,7 +138,26 @@ const App = {
         IstAktiv: true
       };
 
-      await Store.addAufgabe(neueAufgabe);
+      // 1. Hauptaufgabe an den Store/Supabase übergeben
+      const res = await Store.addAufgabe(neueAufgabe);
+      
+      // 2. Tatsächliche Aufgaben-ID ermitteln
+      const aufgabeId = res?.Id || res?.id || generierteId;
+
+      // 3. Checklistenpunkte über die Store-Schnittstelle in Supabase nachspeichern
+      if (tempNeueCheckliste.length > 0) {
+        if (typeof Store.addChecklistePunkt === "function") {
+          for (const punkt of tempNeueCheckliste) {
+            const punktText = punkt.Text || punkt.text;
+            if (punktText) {
+              await Store.addChecklistePunkt(aufgabeId, punktText);
+            }
+          }
+        } else if (typeof Store.speichereCheckliste === "function") {
+          await Store.speichereCheckliste(aufgabeId, tempNeueCheckliste);
+        }
+      }
+
       tempNeueCheckliste = [];
       if (typeof Toast !== "undefined") Toast.show("Aufgabe erstellt.");
       schliessePopup();
