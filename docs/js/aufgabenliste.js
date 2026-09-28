@@ -79,13 +79,28 @@ const Aufgabenliste = {
             <input type="date" id="edit-faelligkeit" class="form-input" lang="de-CH" value="${aufgabe.Faelligkeit || ""}" />
           </div>
         </div>
+
+        <!-- Zeiterfassungs-Felder -->
+        <div class="form-row">
+          <div class="form-field">
+            <label for="edit-sollzeit">Soll-Zeit (Std.)</label>
+            <input type="number" step="0.25" min="0" id="edit-sollzeit" class="form-input" placeholder="z. B. 2.5" value="${aufgabe.SollZeit || ""}" />
+          </div>
+          <div class="form-field">
+            <label for="edit-istzeit">Ist-Zeit (Std.)</label>
+            <input type="number" step="0.25" min="0" id="edit-istzeit" class="form-input" placeholder="z. B. 1.0" value="${aufgabe.IstZeit || ""}" />
+          </div>
+        </div>
+
         <div class="form-field">
           <label for="edit-notizen">Notizen</label>
           <textarea id="edit-notizen" class="form-input" rows="3">${escapeHtml(aufgabe.Notizen || "")}</textarea>
         </div>
+
+        <!-- Link Feld (URLs & Dateipfade) -->
         <div class="form-field">
-          <label for="edit-link">Link</label>
-          <input type="url" id="edit-link" class="form-input" value="${escapeHtml(aufgabe.Link || "")}" placeholder="https://…" />
+          <label for="edit-link">Link / Pfad</label>
+          <input type="text" id="edit-link" class="form-input" value="${escapeHtml(aufgabe.Link || "")}" placeholder="https://… oder file:///…" />
         </div>
 
         <div class="form-field">
@@ -234,6 +249,8 @@ const Aufgabenliste = {
       Faelligkeit: aufgabe.Faelligkeit,
       Notizen: aufgabe.Notizen,
       Link: aufgabe.Link,
+      SollZeit: aufgabe.SollZeit || 0,
+      IstZeit: aufgabe.IstZeit || 0,
       Checkliste: (aufgabe.Checkliste || []).map((c) => ({
         Id: neueId(),
         Titel: c.Titel || c.Text || "",
@@ -267,6 +284,8 @@ const Aufgabenliste = {
         Prioritaet: prioritaet,
         Status: document.getElementById("edit-status")?.value || AufgabenStatus.Offen,
         Faelligkeit: document.getElementById("edit-faelligkeit")?.value || null,
+        SollZeit: parseFloat(document.getElementById("edit-sollzeit")?.value) || 0,
+        IstZeit: parseFloat(document.getElementById("edit-istzeit")?.value) || 0,
         Notizen: document.getElementById("edit-notizen")?.value.trim() || "",
         Link: document.getElementById("edit-link")?.value.trim() || "",
         Checkliste: this._checklisteEntwurf,
