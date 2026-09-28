@@ -53,25 +53,30 @@ const Dashboard = {
 
     switch (this.ausgewaehlterAnsichtsFilter) {
       case "P1":
-        query = query.filter((a) => a.Prioritaet === Prioritaet.P1Dringend);
+        query = query.filter((a) => a.IstAktiv && a.Prioritaet === Prioritaet.P1Dringend);
         break;
       case "P2":
-        query = query.filter((a) => a.Prioritaet === Prioritaet.P2Wichtig);
+        query = query.filter((a) => a.IstAktiv && a.Prioritaet === Prioritaet.P2Wichtig);
         break;
       case "P3":
-        query = query.filter((a) => a.Prioritaet === Prioritaet.P3Normal);
+        query = query.filter((a) => a.IstAktiv && a.Prioritaet === Prioritaet.P3Normal);
         break;
       case "Ueberfaellig":
-        query = query.filter((a) => a.Faelligkeit && a.Faelligkeit < heute);
+        query = query.filter((a) => a.IstAktiv && a.Faelligkeit && a.Faelligkeit < heute);
         break;
       case "Heute":
-        query = query.filter((a) => a.Faelligkeit === heute);
+        query = query.filter((a) => a.IstAktiv && a.Faelligkeit === heute);
         break;
       case "DieseWoche":
-        query = query.filter((a) => a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde);
+        query = query.filter((a) => a.IstAktiv && a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde);
+        break;
+      case "Erledigt":
+        query = query.filter((a) => a.Status === AufgabenStatus.Erledigt);
         break;
       case "Alle":
       default:
+        // "Alle" zeigt standardmässig alle aktiven (offenen/in Arbeit) Aufgaben an
+        query = query.filter((a) => a.IstAktiv);
         break;
     }
 
@@ -99,7 +104,7 @@ const Dashboard = {
 
     const offen = aufgaben.filter((a) => a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit);
 
-    // KPI-Übersichtskarten berechnen
+    // KPI-Übersichtskarten berechnen (berechnen sich weiterhin auf Basis der offenen Aufgaben)
     const heute = heuteIso();
     const wochenEnde = wochenEndeIso(heute);
     const kpis = {
@@ -112,8 +117,8 @@ const Dashboard = {
     };
     this._renderKpis(kpis);
 
-    // Filter anwenden & Liste anzeigen
-    const gefiltert = this._gefiltert(offen);
+    // Filter auf alle Aufgaben anwenden (damit "Erledigt" die erledigten aus der Gesamtheit filtern kann)
+    const gefiltert = this._gefiltert(aufgaben);
     const sortiert = this._sortiereNachPrioUndFaelligkeit(gefiltert);
     this._renderAufgabenListe(sortiert);
   },
