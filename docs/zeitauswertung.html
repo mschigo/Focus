@@ -15,8 +15,10 @@
       <span class="app-header__logo">F</span>
       <h1>Focus – Zeitauswertung</h1>
     </div>
-    <nav class="tabbar" id="tabbar">
-      <a href="index.html" class="tab-btn" style="text-decoration: none;">← Zurück zum Dashboard</a>
+    <nav class="tabbar" id="tabbar" style="margin-left: auto;">
+      <a href="index.html" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;">
+        ← Zurück zum Dashboard
+      </a>
     </nav>
   </header>
 
@@ -76,7 +78,7 @@
 
     <!-- Top Abweichungen -->
     <div class="card">
-      <h2 class="card-title">Grösste Aufwandsabweichungen</h2>
+      <h2 class="card-title">Aufgabenübersicht & Abweichungen</h2>
       <div id="tabelle-abweichungen"></div>
     </div>
 
@@ -166,26 +168,30 @@ function rendereAuswertung() {
 
   let totalSoll = 0;
   let totalIst = 0;
-  let anzahl = 0;
+  let anzahl = aufgaben.length;
 
   const projektStats = {};
+
+  // Initialisiere alle vorhandenen Projekte aus dem Dropdown
+  const gewaehlterBereich = document.getElementById("filter-bereich").value;
+  const projekteInAuswahl = Store.getProjekte(gewaehlterBereich === "Alle" ? null : gewaehlterBereich);
+  projekteInAuswahl.forEach(p => {
+    projektStats[p.Name] = { soll: 0, ist: 0 };
+  });
 
   aufgaben.forEach(a => {
     const soll = parseFloat(a.SollZeit) || 0;
     const ist = parseFloat(a.IstZeit) || 0;
 
-    if (soll > 0 || ist > 0) {
-      anzahl++;
-      totalSoll += soll;
-      totalIst += ist;
+    totalSoll += soll;
+    totalIst += ist;
 
-      const pName = a.ProjektName || "Ohne Projekt";
-      if (!projektStats[pName]) {
-        projektStats[pName] = { soll: 0, ist: 0 };
-      }
-      projektStats[pName].soll += soll;
-      projektStats[pName].ist += ist;
+    const pName = a.ProjektName || "Ohne Projekt";
+    if (!projektStats[pName]) {
+      projektStats[pName] = { soll: 0, ist: 0 };
     }
+    projektStats[pName].soll += soll;
+    projektStats[pName].ist += ist;
   });
 
   const diff = totalIst - totalSoll;
@@ -256,17 +262,16 @@ function rendereKuchenDiagramm(projektStats) {
 function rendereTabelle(aufgaben) {
   const container = document.getElementById("tabelle-abweichungen");
   
-  const abweichungen = aufgaben
+  const alleAufgaben = aufgaben
     .map(a => {
       const soll = parseFloat(a.SollZeit) || 0;
       const ist = parseFloat(a.IstZeit) || 0;
       return { ...a, soll, ist, diff: ist - soll };
     })
-    .filter(a => a.soll > 0 || a.ist > 0)
     .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
-  if (abweichungen.length === 0) {
-    container.innerHTML = `<p style="color: var(--color-text-muted); font-size: 13px;">Keine Aufgaben mit Zeiterfassung vorhanden.</p>`;
+  if (alleAufgaben.length === 0) {
+    container.innerHTML = `<p style="color: var(--color-text-muted); font-size: 13px;">Keine Aufgaben für diese Filterauswahl vorhanden.</p>`;
     return;
   }
 
@@ -284,7 +289,7 @@ function rendereTabelle(aufgaben) {
       <tbody>
   `;
 
-  abweichungen.forEach(a => {
+  alleAufgaben.forEach(a => {
     const diffText = `${a.diff >= 0 ? "+" : ""}${a.diff.toFixed(1)}h`;
     const diffColor = a.diff > 0 ? "var(--color-p1)" : (a.diff < 0 ? "#2e7d32" : "inherit");
 
