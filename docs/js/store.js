@@ -159,7 +159,6 @@ const Store = {
     if (!this._daten) throw new Error("Daten sind noch nicht geladen.");
   },
 
-  /** Korrigierte getAufgaben() mit allen Feldern für das Dashboard */
   getAufgaben() {
     this._pruefeGeladen();
 
@@ -261,6 +260,23 @@ const Store = {
     this.speichern();
   },
 
+  /* WICHTIG: Methoden zum Löschen */
+  endgueltigLoeschen(id) {
+    this._pruefeGeladen();
+    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Id !== id);
+    this.speichern();
+  },
+
+  loescheErledigteAufgaben() {
+    this._pruefeGeladen();
+    const anzahlVorher = this._daten.Aufgaben.length;
+    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Status !== AufgabenStatus.Erledigt);
+    const anzahlGeloescht = anzahlVorher - this._daten.Aufgaben.length;
+
+    if (anzahlGeloescht > 0) this.speichern();
+    return anzahlGeloescht;
+  },
+
   addBereich(name) {
     this._pruefeGeladen();
     if (!name || !name.trim()) return;
@@ -286,7 +302,93 @@ const Store = {
     this._daten.Projekte.push(projekt);
     this.speichern();
     return projekt;
-  }
+  },
+
+  renameBereich(altName, neuName) {
+    this._pruefeGeladen();
+    if (!altName || !altName.trim() || !neuName || !neuName.trim()) return;
+
+    const alt = altName.trim();
+    const neu = neuName.trim();
+
+    const index = this._daten.Konfiguration.Bereiche.findIndex((b) => (b || "").trim().toLowerCase() === alt.toLowerCase());
+    if (index === -1) return;
+
+    const konflikt = this._daten.Konfiguration.Bereiche.findIndex(
+      (b, i) => i !== index && (b || "").trim().toLowerCase() === neu.toLowerCase()
+    );
+    if (konflikt !== -1) {
+      throw new Error(`Ein Bereich mit dem Namen "${neu}" existiert bereits.`);
+    }
+
+    this._daten.Konfiguration.Bereiche[index] = neu;
+
+    for (const projekt of this._daten.Projekte) {
+      if (projekt.Bereich.toLowerCase() === alt.toLowerCase()) {
+        projekt.Bereich = neu;
+      }
+    }
+
+    this.speichern();
+  },
+
+  deleteBereich(name) {
+    this._pruefeGeladen();
+    if (!name || !name.trim()) return;
+
+    const n = name.trim();
+
+    if (this._daten.Projekte.some((p) => p.Bereich.toLowerCase() === n.toLowerCase())) {
+      throw new Error(`Der Bereich "${n}" hat noch Projekte und kann nicht gelöscht werden.`);
+    }
+
+    this._daten.Konfiguration.Bereiche = this._daten.Konfiguration.Bereiche.filter(
+      (b) => (b || "").trim().toLowerCase() !== n.toLowerCase()
+    );
+    this.speichern();
+  },
+
+  renameProjekt(projektId, neuerName) {
+    this._pruefeGeladen();
+    if (!neuerName || !neuerName.trim()) return;
+
+    const projekt = this._daten.Projekte.find((p) => p.Id === projektId);
+    if (!projekt) return;
+
+    const neu = neuerName.trim();
+
+    const konflikt = this._daten.Projekte.some(
+      (p) => p.Id !== projektId && p.Bereich.toLowerCase() === projekt.Bereich.toLowerCase() && p.Name.toLowerCase() === neu.toLowerCase()
+    );
+    if (konflikt) {
+      throw new Error(`Im Bereich "${projekt.Bereich}" existiert bereits ein Projekt mit diesem Namen.`);
+    }
+
+    projekt.Name = neu;
+    this.speichern();
+  },
+
+  deleteProjekt(projektId) {
+    this._pruefeGeladen();
+
+    const projekt = this._daten.Projekte.find((p) => p.Id === projektId);
+    if (!projekt) return;
+
+    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.ProjektId !== projektId);
+    this._daten.Projekte = this._daten.Projekte.filter((p) => p.Id !== projektId);
+    this.speichern();
+  },
+
+  exportJson() {
+    this._pruefeGeladen();
+    return JSON.stringify(this._daten, null, 2);
+  },
+
+  importJson(jsonText) {
+    this._pruefeGeladen();
+    this._daten = normalisiereDaten(JSON.parse(jsonText));
+    this.speichern();
+  },
 };
 
 const Anzeige = {
