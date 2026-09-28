@@ -15,645 +15,274 @@
  * Supabase durch.
  */
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let tempNeueCheckliste = [];
 
-const Prioritaet = Object.freeze({
-  P1Dringend: "P1Dringend",
-  P2Wichtig: "P2Wichtig",
-  P3Normal: "P3Normal",
-  P4Spaeter: "P4Spaeter",
-});
+const App = {
+  _viewsInitialisiert: false,
 
-const PRIORITAET_REIHENFOLGE = [
-  Prioritaet.P1Dringend,
-  Prioritaet.P2Wichtig,
-  Prioritaet.P3Normal,
-  Prioritaet.P4Spaeter,
-];
+  async init() {
+    this._wireLoginForm();
+    this._wireAllgemeineUi();
+    this._wireNeueAufgabeForm();
 
-const AufgabenStatus = Object.freeze({
-  Offen: "Offen",
-  InArbeit: "InArbeit",
-  Erledigt: "Erledigt",
-});
+    Store.onAuthChange((eingeloggt) => {
+      if (eingeloggt) {
+        this._zeigeAppShell();
 
-function neueId() {
-  if (window.crypto && typeof window.crypto.randomUUID === "function") {
-    return window.crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-function heuteIso() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function wochenEndeIso(heute) {
-  const d = new Date(`${heute}T00:00:00`);
-  const dayOfWeek = d.getDay();
-  d.setDate(d.getDate() + (6 - dayOfWeek));
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function leereDaten() {
-  return { Aufgaben: [], Projekte: [], Konfiguration: { Bereiche: [] } };
-}
-
-/** Beispieldaten für eine frisch angelegte Nutzer-Zeile. */
-function demoDaten() {
-  const bereichPersoenlich = "Privat";
-  const bereichArbeit = "Arbeit";
-
-  const projektAllgemein = { Id: neueId(), Name: "Allgemein", Bereich: bereichArbeit };
-  const projektHaushalt = { Id: neueId(), Name: "Haushalt", Bereich: bereichPersoenlich };
-
-  const heute = heuteIso();
-
-  return {
-    Aufgaben: [
-      {
-        Id: neueId(),
-        Titel: "Willkommen bei Focus!",
-        ProjektId: projektAllgemein.Id,
-        Prioritaet: Prioritaet.P2Wichtig,
-        Status: AufgabenStatus.Offen,
-        Faelligkeit: heute,
-        Notizen: "Das ist eine Beispielaufgabe. Lege eigene Aufgaben über 'Aufgaben' an (folgt im nächsten Schritt).",
-        Link: "",
-        Checkliste: [],
-        ErstelltAm: nowIso(),
-        GeaendertAm: nowIso(),
-      },
-      {
-        Id: neueId(),
-        Titel: "Einkaufsliste schreiben",
-        ProjektId: projektHaushalt.Id,
-        Prioritaet: Prioritaet.P3Normal,
-        Status: AufgabenStatus.Offen,
-        Faelligkeit: null,
-        Notizen: "",
-        Link: "",
-        Checkliste: [],
-        ErstelltAm: nowIso(),
-        GeaendertAm: nowIso(),
-      },
-    ],
-    Projekte: [projektAllgemein, projektHaushalt],
-    Konfiguration: { Bereiche: [bereichArbeit, bereichPersoenlich] },
-  };
-}
-
-function normalisiereDaten(parsed) {
-  return {
-    Aufgaben: Array.isArray(parsed?.Aufgaben) ? parsed.Aufgaben : [],
-    Projekte: Array.isArray(parsed?.Projekte) ? parsed.Projekte : [],
-    Konfiguration: { Bereiche: Array.isArray(parsed?.Konfiguration?.Bereiche) ? parsed.Konfiguration.Bereiche : [] },
-  };
-}
-
-const Store = {
-  _daten: null,
-  _userId: null,
-  _authCallbacks: [],
-
-  // ---------------------------------------------------------------
-  // Auth
-  // ---------------------------------------------------------------
-
-  onAuthChange(callback) {
-    this._authCallbacks.push(callback);
-  },
-
-  _notifyAuthChange(eingeloggt) {
-    for (const cb of this._authCallbacks) {
-      try {
-        cb(eingeloggt);
-      } catch (err) {
-        console.error("Focus: Fehler in Auth-Callback.", err);
-      }
-    }
-  },
-
-  async starteAuthUeberwachung() {
-    const { data, error } = await supabaseClient.auth.getSession();
-    if (error) {
-      console.error("Focus: Fehler beim Prüfen der Sitzung.", error);
-    }
-
-    if (data?.session) {
-      await this._ladeFuerNutzer(data.session.user.id);
-      this._notifyAuthChange(true);
-    } else {
-      this._notifyAuthChange(false);
-    }
-
-    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        try {
-          await this._ladeFuerNutzer(session.user.id);
-          this._notifyAuthChange(true);
-        } catch (err) {
-          console.error("Focus: Fehler beim Laden nach Login.", err);
-          Anzeige.zeigeToast("Daten konnten nicht geladen werden: " + err.message, true);
+        if (!this._viewsInitialisiert) {
+          this._viewsInitialisiert = true;
+          Dashboard.init();
+          Aufgabenliste.init();
+          Einstellungen.init();
+        } else {
+          Dashboard.render();
+          Einstellungen.render();
         }
       } else {
-        this._daten = null;
-        this._userId = null;
-        this._notifyAuthChange(false);
+        this._zeigeLoginScreen();
+      }
+    });
+
+    try {
+      await Store.starteAuthUeberwachung();
+    } catch (err) {
+      console.error("Focus: Fehler beim Start.", err);
+      this._zeigeLoginScreen();
+      document.getElementById("login-error").textContent = "Verbindung zu Supabase fehlgeschlagen: " + err.message;
+    }
+  },
+
+  _wireAllgemeineUi() {
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        this.wechsleTab(btn.dataset.tab);
+      });
+    });
+
+    document.getElementById("details-popup-close")?.addEventListener("click", () => this.schliesseDetails());
+    document.getElementById("details-popup")?.addEventListener("click", (e) => {
+      if (e.target.id === "details-popup") this.schliesseDetails();
+    });
+
+    document.getElementById("logout-btn")?.addEventListener("click", async () => {
+      await Store.abmelden();
+    });
+  },
+
+  _wireNeueAufgabeForm() {
+    // Button auf Dashboard öffnet Popup
+    document.getElementById("dashboard-fab-neue-aufgabe")?.addEventListener("click", () => {
+      document.getElementById("neue-aufgabe-form").reset();
+      document.getElementById("neu-link").value = "";
+      tempNeueCheckliste = [];
+      this._renderNeueCheckliste();
+
+      const bereiche = Store.getBereiche();
+      const bereichSelect = document.getElementById("neu-bereich");
+      bereichSelect.innerHTML = bereiche.map(b => `<option value="${b}">${escapeHtml(b)}</option>`).join("");
+
+      this._updateNeuProjektDropdown();
+
+      document.getElementById("neue-aufgabe-popup").hidden = false;
+      document.getElementById("neu-titel").focus();
+    });
+
+    // Bereichsänderung aktualisiert Projekt-Dropdown
+    document.getElementById("neu-bereich")?.addEventListener("change", () => this._updateNeuProjektDropdown());
+
+    // Schließen / Abbrechen Handlers
+    const schliessePopup = () => {
+      document.getElementById("neue-aufgabe-popup").hidden = true;
+    };
+    document.getElementById("neue-aufgabe-popup-close")?.addEventListener("click", schliessePopup);
+    document.getElementById("neue-aufgabe-abbrechen-btn")?.addEventListener("click", schliessePopup);
+
+    // Checklistenpunkt hinzufügen Button
+    document.getElementById("neu-checkliste-add-btn")?.addEventListener("click", () => {
+      const input = document.getElementById("neu-checkliste-input");
+      const text = input.value.trim();
+      if (text) {
+        tempNeueCheckliste.push({
+          Id: neueId(),
+          Titel: text,
+          IstErledigt: false
+        });
+        input.value = "";
+        this._renderNeueCheckliste();
+      }
+    });
+
+    // Enter-Taste im Checklisten-Input abfangen
+    document.getElementById("neu-checkliste-input")?.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        document.getElementById("neu-checkliste-add-btn").click();
+      }
+    });
+
+    // Formular Absenden
+    document.getElementById("neue-aufgabe-form")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const titel = document.getElementById("neu-titel").value.trim();
+      if (!titel) return;
+
+      const bereich = document.getElementById("neu-bereich").value;
+      const projektName = document.getElementById("neu-projekt").value;
+
+      // 1. ProjektId aus dem Store abrufen (oder Projekt bei Bedarf anlegen)
+      let projekte = Store.getProjekte(bereich);
+      let projekt = projekte.find(p => p.Name === projektName);
+
+      if (!projekt) {
+        // Falls Projekt nicht existiert, im Store anlegen
+        try {
+          projekt = Store.addProjekt(bereich, projektName || "Allgemein");
+        } catch (err) {
+          projekte = Store.getProjekte(bereich);
+          projekt = projekte[0];
+        }
+      }
+
+      if (!projekt) {
+        Anzeige.zeigeToast("Ungültiges Projekt gewählt.", true);
+        return;
+      }
+
+      // 2. Objektstruktur exakt nach aufgaben.json DTO aufbauen
+      const neueAufgabe = {
+        Id: neueId(),
+        Titel: titel,
+        ProjektId: projekt.Id,
+        Prioritaet: document.getElementById("neu-prioritaet").value,
+        Faelligkeit: document.getElementById("neu-faelligkeit").value || null,
+        Notizen: document.getElementById("neu-notizen").value || "",
+        Link: document.getElementById("neu-link").value || "",
+        Status: AufgabenStatus.Offen,
+        Checkliste: [...tempNeueCheckliste],
+      };
+
+      try {
+        // 3. Korrekte Funktion aus store.js aufrufen
+        Store.addOrUpdateAufgabe(neueAufgabe);
+
+        tempNeueCheckliste = [];
+        Anzeige.zeigeToast("Aufgabe erstellt.");
+        schliessePopup();
+      } catch (err) {
+        console.error("Fehler beim Speichern der Aufgabe:", err);
+        Anzeige.zeigeToast("Fehler: " + err.message, true);
       }
     });
   },
 
-  async anmelden(email, passwort) {
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password: passwort });
-    if (error) throw error;
+  _updateNeuProjektDropdown() {
+    const bereich = document.getElementById("neu-bereich").value;
+    const projekte = Store.getProjekte(bereich);
+    const projektSelect = document.getElementById("neu-projekt");
+
+    if (projekte.length === 0) {
+      projektSelect.innerHTML = `<option value="Allgemein">Allgemein</option>`;
+    } else {
+      projektSelect.innerHTML = projekte.map(p => `<option value="${p.Name}">${escapeHtml(p.Name)}</option>`).join("");
+    }
   },
 
-  async registrieren(email, passwort) {
-    const { error } = await supabaseClient.auth.signUp({ email, password: passwort });
-    if (error) throw error;
-  },
+  _renderNeueCheckliste() {
+    const container = document.getElementById("neu-checkliste-container");
+    container.innerHTML = "";
 
-  async abmelden() {
-    await supabaseClient.auth.signOut();
-  },
-
-  async _ladeFuerNutzer(userId) {
-    this._userId = userId;
-
-    const { data, error } = await supabaseClient
-      .from("focus_daten")
-      .select("daten")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    if (data && data.daten) {
-      this._daten = normalisiereDaten(data.daten);
+    if (tempNeueCheckliste.length === 0) {
+      container.innerHTML = `<span style="font-size: 13px; color: var(--color-text-muted);">Noch keine Punkte.</span>`;
       return;
     }
 
-    // Erste Anmeldung dieses Nutzers: Zeile mit Beispieldaten anlegen.
-    this._daten = demoDaten();
-    const { error: insertError } = await supabaseClient
-      .from("focus_daten")
-      .insert({ user_id: userId, daten: this._daten });
+    tempNeueCheckliste.forEach((punkt, index) => {
+      const row = document.createElement("div");
+      row.className = "checkliste-item";
+      row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 4px 0;";
 
-    if (insertError) throw insertError;
-  },
+      const punktText = punkt.Titel || punkt.Text || punkt.text || "";
 
-  // ---------------------------------------------------------------
-  // Speichern (Zwischenspeicher sofort, Supabase im Hintergrund)
-  // ---------------------------------------------------------------
+      row.innerHTML = `
+        <span style="font-size: 13px;">${escapeHtml(punktText)}</span>
+        <button type="button" class="icon-btn" title="Löschen" data-index="${index}">✕</button>
+      `;
 
-  speichern() {
-    document.dispatchEvent(new CustomEvent("focus:datenGeaendert"));
-    this._persistiereImHintergrund();
-  },
+      row.querySelector("button").addEventListener("click", (e) => {
+        const idx = e.target.getAttribute("data-index");
+        tempNeueCheckliste.splice(idx, 1);
+        this._renderNeueCheckliste();
+      });
 
-  async _persistiereImHintergrund() {
-    if (!this._userId) return;
-
-    const { error } = await supabaseClient
-      .from("focus_daten")
-      .update({ daten: this._daten, aktualisiert_am: nowIso() })
-      .eq("user_id", this._userId);
-
-    if (error) {
-      console.error("Focus: Fehler beim Speichern in Supabase.", error);
-      Anzeige.zeigeToast("Speichern fehlgeschlagen (offline?): " + error.message, true);
-    }
-  },
-
-  _pruefeGeladen() {
-    if (!this._daten) {
-      throw new Error("Daten sind noch nicht geladen. Bitte zuerst anmelden.");
-    }
-  },
-
-  // ---------------------------------------------------------------
-  // Lesen
-  // ---------------------------------------------------------------
-
-  /** Alle Aufgaben inkl. aufgelöster Anzeigefelder Bereich/ProjektName. */
-  getAufgaben() {
-    this._pruefeGeladen();
-
-    const projektLookup = new Map(this._daten.Projekte.map((p) => [p.Id, p]));
-    const heute = heuteIso();
-
-    return this._daten.Aufgaben.map((a) => {
-      const projekt = projektLookup.get(a.ProjektId);
-      const istAktiv = a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit;
-      const istUeberfaellig = !!a.Faelligkeit && a.Faelligkeit < heute && istAktiv;
-
-      return {
-        ...a,
-        Bereich: projekt ? projekt.Bereich : "",
-        ProjektName: projekt ? projekt.Name : "",
-        IstAktiv: istAktiv,
-        IstAbgeschwaecht: a.Status === AufgabenStatus.Erledigt,
-        IstUeberfaellig: istUeberfaellig,
-      };
+      container.appendChild(row);
     });
   },
 
-  getBereiche() {
-    this._pruefeGeladen();
+  _wireLoginForm() {
+    const form = document.getElementById("login-form");
+    const modusToggle = document.getElementById("login-modus-toggle");
+    const submitBtn = document.getElementById("login-submit-btn");
+    const fehlerEl = document.getElementById("login-error");
+    let modus = "signin";
 
-    const gesehen = new Set();
-    const ergebnis = [];
-    for (const b of this._daten.Konfiguration.Bereiche) {
-      if (!b || !b.trim()) continue;
-      const key = b.trim().toLowerCase();
-      if (gesehen.has(key)) continue;
-      gesehen.add(key);
-      ergebnis.push(b.trim());
-    }
-    return ergebnis;
-  },
+    modusToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      modus = modus === "signin" ? "signup" : "signin";
+      submitBtn.textContent = modus === "signin" ? "Anmelden" : "Konto erstellen";
+      modusToggle.textContent = modus === "signin" ? "Neu hier? Konto erstellen" : "Bereits ein Konto? Anmelden";
+      fehlerEl.textContent = "";
+    });
 
-  getProjekte(bereich = null) {
-    this._pruefeGeladen();
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value.trim();
+      const passwort = document.getElementById("login-passwort").value;
+      fehlerEl.textContent = "";
+      submitBtn.disabled = true;
 
-    let liste = this._daten.Projekte;
-    if (bereich && bereich.trim()) {
-      const b = bereich.trim().toLowerCase();
-      liste = liste.filter((p) => (p.Bereich || "").trim().toLowerCase() === b);
-    }
-    return [...liste].sort((a, b) => a.Name.localeCompare(b.Name, "de"));
-  },
-
-  // ---------------------------------------------------------------
-  // Schreiben – Aufgaben
-  // ---------------------------------------------------------------
-
-  addOrUpdateAufgabe(aufgabe) {
-    this._pruefeGeladen();
-
-    if (!aufgabe.ProjektId || !this._daten.Projekte.some((p) => p.Id === aufgabe.ProjektId)) {
-      throw new Error("Die Aufgabe muss einem gültigen Projekt zugeordnet sein.");
-    }
-
-    const now = nowIso();
-    const index = this._daten.Aufgaben.findIndex((a) => a.Id === aufgabe.Id);
-
-    if (index === -1) {
-      const neu = {
-        Id: aufgabe.Id || neueId(),
-        Titel: aufgabe.Titel,
-        ProjektId: aufgabe.ProjektId,
-        Prioritaet: aufgabe.Prioritaet || Prioritaet.P3Normal,
-        Status: aufgabe.Status || AufgabenStatus.Offen,
-        Faelligkeit: aufgabe.Faelligkeit || null,
-        Notizen: aufgabe.Notizen || "",
-        Link: aufgabe.Link || "",
-        Checkliste: aufgabe.Checkliste || [],
-        ErstelltAm: now,
-        GeaendertAm: now,
-      };
-      this._daten.Aufgaben.push(neu);
-    } else {
-      const bestehend = this._daten.Aufgaben[index];
-      this._daten.Aufgaben[index] = {
-        ...bestehend,
-        Titel: aufgabe.Titel,
-        ProjektId: aufgabe.ProjektId,
-        Prioritaet: aufgabe.Prioritaet,
-        Status: aufgabe.Status,
-        Faelligkeit: aufgabe.Faelligkeit || null,
-        Notizen: aufgabe.Notizen || "",
-        Link: aufgabe.Link || "",
-        Checkliste: aufgabe.Checkliste || [],
-        GeaendertAm: now,
-      };
-    }
-
-    this.speichern();
-  },
-
-  setAufgabenStatus(id, status) {
-    this._pruefeGeladen();
-
-    const aufgabe = this._daten.Aufgaben.find((a) => a.Id === id);
-    if (!aufgabe) return;
-
-    aufgabe.Status = status;
-    aufgabe.GeaendertAm = nowIso();
-    this.speichern();
-  },
-
-  endgueltigLoeschen(id) {
-    this._pruefeGeladen();
-    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Id !== id);
-    this.speichern();
-  },
-
-  /** Löscht alle erledigten Aufgaben endgültig. Gibt die Anzahl gelöschter Aufgaben zurück. */
-  loescheErledigteAufgaben() {
-    this._pruefeGeladen();
-
-    const anzahlVorher = this._daten.Aufgaben.length;
-    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Status !== AufgabenStatus.Erledigt);
-    const anzahlGeloescht = anzahlVorher - this._daten.Aufgaben.length;
-
-    if (anzahlGeloescht > 0) this.speichern();
-    return anzahlGeloescht;
-  },
-
-  // ---------------------------------------------------------------
-  // Schreiben – Bereiche & Projekte
-  // ---------------------------------------------------------------
-
-  addBereich(name) {
-    this._pruefeGeladen();
-    if (!name || !name.trim()) return;
-
-    const n = name.trim();
-    if (this._daten.Konfiguration.Bereiche.some((b) => (b || "").trim().toLowerCase() === n.toLowerCase())) return;
-
-    this._daten.Konfiguration.Bereiche.push(n);
-    this.speichern();
-  },
-
-  addProjekt(bereich, name) {
-    this._pruefeGeladen();
-
-    if (!bereich || !bereich.trim()) throw new Error("Bereich ist erforderlich.");
-    if (!name || !name.trim()) throw new Error("Projektname ist erforderlich.");
-
-    const b = bereich.trim();
-    const n = name.trim();
-
-    if (!this._daten.Konfiguration.Bereiche.some((x) => (x || "").trim().toLowerCase() === b.toLowerCase())) {
-      throw new Error(`Der Bereich "${b}" existiert nicht.`);
-    }
-
-    if (this._daten.Projekte.some((p) => p.Bereich.toLowerCase() === b.toLowerCase() && p.Name.toLowerCase() === n.toLowerCase())) {
-      throw new Error(`Im Bereich "${b}" existiert bereits ein Projekt mit diesem Namen.`);
-    }
-
-    const projekt = { Id: neueId(), Name: n, Bereich: b };
-    this._daten.Projekte.push(projekt);
-    this.speichern();
-    return projekt;
-  },
-
-  renameBereich(altName, neuName) {
-    this._pruefeGeladen();
-    if (!altName || !altName.trim() || !neuName || !neuName.trim()) return;
-
-    const alt = altName.trim();
-    const neu = neuName.trim();
-
-    const index = this._daten.Konfiguration.Bereiche.findIndex((b) => (b || "").trim().toLowerCase() === alt.toLowerCase());
-    if (index === -1) return;
-
-    const konflikt = this._daten.Konfiguration.Bereiche.findIndex(
-      (b, i) => i !== index && (b || "").trim().toLowerCase() === neu.toLowerCase()
-    );
-    if (konflikt !== -1) {
-      throw new Error(`Ein Bereich mit dem Namen "${neu}" existiert bereits.`);
-    }
-
-    this._daten.Konfiguration.Bereiche[index] = neu;
-
-    for (const projekt of this._daten.Projekte) {
-      if (projekt.Bereich.toLowerCase() === alt.toLowerCase()) {
-        projekt.Bereich = neu;
+      try {
+        if (modus === "signin") {
+          await Store.anmelden(email, passwort);
+        } else {
+          await Store.registrieren(email, passwort);
+          fehlerEl.style.color = "";
+          fehlerEl.textContent = "Konto erstellt. Falls E-Mail-Bestätigung aktiv ist, bitte den Link in der Mail bestätigen und dich danach anmelden.";
+        }
+      } catch (err) {
+        fehlerEl.style.color = "var(--color-p1)";
+        fehlerEl.textContent = err.message;
+      } finally {
+        submitBtn.disabled = false;
       }
-    }
-
-    this.speichern();
+    });
   },
 
-  deleteBereich(name) {
-    this._pruefeGeladen();
-    if (!name || !name.trim()) return;
-
-    const n = name.trim();
-
-    if (this._daten.Projekte.some((p) => p.Bereich.toLowerCase() === n.toLowerCase())) {
-      throw new Error(`Der Bereich "${n}" hat noch Projekte und kann nicht gelöscht werden.`);
-    }
-
-    this._daten.Konfiguration.Bereiche = this._daten.Konfiguration.Bereiche.filter(
-      (b) => (b || "").trim().toLowerCase() !== n.toLowerCase()
-    );
-    this.speichern();
+  _zeigeLoginScreen() {
+    document.getElementById("loading-screen").hidden = true;
+    document.getElementById("app-shell").hidden = true;
+    document.getElementById("login-screen").hidden = false;
   },
 
-  renameProjekt(projektId, neuerName) {
-    this._pruefeGeladen();
-    if (!neuerName || !neuerName.trim()) return;
-
-    const projekt = this._daten.Projekte.find((p) => p.Id === projektId);
-    if (!projekt) return;
-
-    const neu = neuerName.trim();
-
-    const konflikt = this._daten.Projekte.some(
-      (p) => p.Id !== projektId && p.Bereich.toLowerCase() === projekt.Bereich.toLowerCase() && p.Name.toLowerCase() === neu.toLowerCase()
-    );
-    if (konflikt) {
-      throw new Error(`Im Bereich "${projekt.Bereich}" existiert bereits ein Projekt mit diesem Namen.`);
-    }
-
-    projekt.Name = neu;
-    this.speichern();
+  _zeigeAppShell() {
+    document.getElementById("loading-screen").hidden = true;
+    document.getElementById("login-screen").hidden = true;
+    document.getElementById("app-shell").hidden = false;
   },
 
-  deleteProjekt(projektId) {
-    this._pruefeGeladen();
-
-    const projekt = this._daten.Projekte.find((p) => p.Id === projektId);
-    if (!projekt) return;
-
-    // Alle Aufgaben, die zu diesem Projekt gehören, werden mitgelöscht (kein Papierkorb) –
-    // wie in der MAUI-App.
-    this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.ProjektId !== projektId);
-    this._daten.Projekte = this._daten.Projekte.filter((p) => p.Id !== projektId);
-    this.speichern();
+  wechsleTab(tab) {
+    document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("is-active", btn.dataset.tab === tab));
+    document.querySelectorAll(".view").forEach((view) => view.classList.toggle("is-active", view.id === `view-${tab}`));
   },
 
-  // ---------------------------------------------------------------
-  // Import / Export (weiterhin nützlich als Backup bzw. zum Übertragen
-  // aus/in die MAUI-App)
-  // ---------------------------------------------------------------
-
-  exportJson() {
-    this._pruefeGeladen();
-    return JSON.stringify(this._daten, null, 2);
+  oeffneDetails(aufgabeId) {
+    Aufgabenliste.oeffneBearbeitenPopup(aufgabeId);
   },
 
-  importJson(jsonText) {
-    this._pruefeGeladen();
-    this._daten = normalisiereDaten(JSON.parse(jsonText));
-    this.speichern();
+  schliesseDetails() {
+    document.getElementById("details-popup").hidden = true;
   },
 };
 
-// ---------------------------------------------------------------
-// Gemeinsame Anzeige-Helfer (von mehreren Views genutzt)
-// ---------------------------------------------------------------
-
-const Anzeige = {
-  prioritaetBadgeClass(prioritaet) {
-    switch (prioritaet) {
-      case Prioritaet.P1Dringend: return "badge--p1";
-      case Prioritaet.P2Wichtig: return "badge--p2";
-      case Prioritaet.P4Spaeter: return "badge--p4";
-      default: return "badge--p3";
-    }
-  },
-
-  prioritaetText(prioritaet) {
-    switch (prioritaet) {
-      case Prioritaet.P1Dringend: return "P1";
-      case Prioritaet.P2Wichtig: return "P2";
-      case Prioritaet.P4Spaeter: return "P4";
-      default: return "P3";
-    }
-  },
-
-  statusSymbol(status) {
-    switch (status) {
-      case AufgabenStatus.InArbeit: return "⏱";
-      case AufgabenStatus.Erledigt: return "✓";
-      default: return "○";
-    }
-  },
-
-  statusDotClass(status) {
-    switch (status) {
-      case AufgabenStatus.InArbeit: return "status-dot--inarbeit";
-      case AufgabenStatus.Erledigt: return "status-dot--erledigt";
-      default: return "status-dot--offen";
-    }
-  },
-
-  faelligkeitText(isoDatum) {
-    if (!isoDatum) return "";
-    const [jahr, monat, tag] = isoDatum.split("-");
-    return `${tag}.${monat}.${jahr}`;
-  },
-
-  zeigeToast(nachricht, istFehler = false) {
-    const el = document.getElementById("toast");
-    if (!el) return;
-    el.textContent = nachricht;
-    el.classList.toggle("is-error", istFehler);
-    el.hidden = false;
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
-  },
-};
-
-// ---------------------------------------------------------------
-// Lokale (geräteweise) Einstellungen – entspricht AppSettingsService.cs /
-// Preferences in der MAUI-App: Bereichsfarben und Dark-Mode-Wahl werden
-// bewusst NICHT über Supabase synchronisiert, sondern pro Gerät im
-// Browser gespeichert, genau wie in der Windows-App.
-// ---------------------------------------------------------------
-
-const LOKALE_EINSTELLUNGEN_KEY = "focus.lokaleEinstellungen.v1";
-
-function anwendenDarkMode(value) {
-  if (value === "dark") {
-    document.documentElement.setAttribute("data-theme", "dark");
-  } else if (value === "light") {
-    document.documentElement.setAttribute("data-theme", "light");
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
-}
-
-const LokaleEinstellungen = {
-  _daten: null,
-
-  _laden() {
-    if (this._daten) return this._daten;
-
-    try {
-      const raw = localStorage.getItem(LOKALE_EINSTELLUNGEN_KEY);
-      this._daten = raw ? JSON.parse(raw) : {};
-    } catch {
-      this._daten = {};
-    }
-
-    this._daten.bereichFarben ??= {};
-    return this._daten;
-  },
-
-  _speichern() {
-    localStorage.setItem(LOKALE_EINSTELLUNGEN_KEY, JSON.stringify(this._daten));
-  },
-
-  getBereichFarbe(bereichName) {
-    if (!bereichName) return "";
-    return this._laden().bereichFarben[bereichName.trim()] || "";
-  },
-
-  setBereichFarbe(bereichName, hex) {
-    if (!bereichName || !bereichName.trim()) return;
-    const d = this._laden();
-    const key = bereichName.trim();
-
-    if (!hex) {
-      delete d.bereichFarben[key];
-    } else {
-      d.bereichFarben[key] = hex;
-    }
-
-    this._speichern();
-  },
-
-  renameBereichFarbe(alterName, neuerName) {
-    if (!alterName || !neuerName) return;
-    const d = this._laden();
-    const alt = alterName.trim();
-    const neu = neuerName.trim();
-
-    if (d.bereichFarben[alt] === undefined) return;
-
-    d.bereichFarben[neu] = d.bereichFarben[alt];
-    delete d.bereichFarben[alt];
-    this._speichern();
-  },
-
-  removeBereichFarbe(bereichName) {
-    if (!bereichName) return;
-    const d = this._laden();
-    const key = bereichName.trim();
-
-    if (d.bereichFarben[key] === undefined) return;
-
-    delete d.bereichFarben[key];
-    this._speichern();
-  },
-
-  /** null = folgt Systemeinstellung, sonst "dark" oder "light". */
-  getDarkMode() {
-    return this._laden().darkMode ?? null;
-  },
-
-  setDarkMode(value) {
-    const d = this._laden();
-    d.darkMode = value;
-    this._speichern();
-    anwendenDarkMode(value);
-  },
-};
-
-// Sofort beim Laden anwenden, damit die Seite nicht kurz im falschen Theme aufblitzt.
-anwendenDarkMode(LokaleEinstellungen.getDarkMode());
+document.addEventListener("DOMContentLoaded", () => App.init());
