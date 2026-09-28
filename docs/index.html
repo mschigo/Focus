@@ -77,7 +77,7 @@
       <div class="kpi-grid" id="dashboard-kpis"></div>
 
       <!-- Fest platzierte Filter-Zeile direkt über der Liste -->
-      <div class="filter-row" style="margin-top: 16px; margin-bottom: 12px;">
+      <div class="filter-row" style="margin-top: 16px; margin-bottom: 12px; align-items: flex-end; gap: 12px;">
         <div class="filter-group">
           <label class="filter-group__label" for="dashboard-ansicht-filter">Filter</label>
           <select id="dashboard-ansicht-filter" class="form-input" style="min-width: 180px;">
@@ -90,6 +90,10 @@
             <option value="DieseWoche">Diese Woche</option>
             <option value="Erledigt">Erledigt</option>
           </select>
+        </div>
+        <div class="filter-group filter-group--grow">
+          <label class="filter-group__label" for="dashboard-such-filter">Suche</label>
+          <input type="text" id="dashboard-such-filter" class="form-input" placeholder="Titel, Notiz, Projekt suchen…" />
         </div>
       </div>
 
