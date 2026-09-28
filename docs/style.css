@@ -547,7 +547,30 @@ main {
      anzeigen statt sie auf einer schmalen Handy-Breite zusammenzudrücken. */
   .form-row {
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  /* Wichtigste Ursache für "alles zu groß": iOS/Android zoomen die ganze
+     Seite automatisch hinein, sobald ein Feld mit Schrift < 16px fokussiert
+     wird. Deshalb hier auf 16px anheben, statt der bisherigen 14px. */
+  .form-input,
+  select.form-input,
+  textarea.form-input {
+    font-size: 16px;
+    padding: 8px 10px;
+  }
+
+  .form-field {
+    margin-bottom: 10px;
+    gap: 3px;
+  }
+
+  .form-field label {
+    font-size: 12px;
+  }
+
+  .aufgabe-form textarea.form-input {
+    min-height: 60px;
   }
 
   /* Popup als Bottom-Sheet: nutzt die volle Breite/Höhe des Handys statt
