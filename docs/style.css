@@ -680,7 +680,19 @@ select.form-input {
   color: var(--color-text);
 }
 
-/* ---------- Checkliste (im Bearbeiten-Popup) ---------- */
+/* ---------- Checkliste (im Bearbeiten-Popup & Dashboard Badge) ---------- */
+
+.checkliste-progress-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-p3-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
 
 .checkliste-item {
   display: flex;
