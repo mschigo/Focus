@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Focus – Gantt Chart</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Chart.js & Date-Adapter für Gantt/Timeline -->
+  <!-- Chart.js, Date-Adapter & Zoom-Plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
 
@@ -46,6 +47,9 @@
     <!-- Gantt Chart Karte -->
     <div class="card" style="margin-bottom: 24px;">
       <h2 class="card-title">Projekt-Timeline (Fälligkeiten & Zeiträume)</h2>
+      <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -8px; margin-bottom: 12px;">
+        💡 Hinweis: Nutze das <strong>Mausrad zum Zoomen</strong> und die <strong>gedrückte Maustaste zum Verschieben</strong> des Zeitstrahls.
+      </p>
       <div style="position: relative; height: 450px; width: 100%;">
         <canvas id="gantt-chart"></canvas>
       </div>
@@ -138,8 +142,9 @@ function rendereGantt() {
 
   if (ganttChart) ganttChart.destroy();
 
-  // Nur Aufgaben mit Fälligkeit berücksichtigen
-  const aufgabenMitDatum = aufgaben.filter(a => a.Faelligkeit);
+  // Strikte Validierung: Nur Datumsformate im Schema YYYY-MM-DD erlauben
+  const datumRegex = /^\d{4}-\d{2}-\d{2}$/;
+  const aufgabenMitDatum = aufgaben.filter(a => a.Faelligkeit && datumRegex.test(a.Faelligkeit));
 
   if (aufgabenMitDatum.length === 0) {
     return;
@@ -149,18 +154,37 @@ function rendereGantt() {
   const dataPoints = [];
   const backgroundColors = [];
 
+  let minDate = null;
+  let maxDate = null;
+
   aufgabenMitDatum.forEach(a => {
     const titel = a.Titel;
     const faellig = a.Faelligkeit; // YYYY-MM-DD
     
-    // Startdatum berechnen (ErstelltAm oder 1 Tag vor Fälligkeit)
-    let start = a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : faellig;
-    if (start > faellig) start = faellig;
+    // Startdatum bestimmen (ErstelltAm nur nutzen, wenn im korrekten Format YYYY-MM-DD)
+    let start = faellig;
+    if (a.ErstelltAm && datumRegex.test(a.ErstelltAm.substring(0, 10))) {
+      const ers = a.ErstelltAm.substring(0, 10);
+      if (ers <= faellig) {
+        start = ers;
+      }
+    }
+
+    // Wenn Start und Fälligkeit identisch sind, setzen wir für die Sichtbarkeit einen Puffer von 2 Tagen nach links
+    if (start === faellig) {
+      const d = new Date(faellig);
+      d.setDate(d.getDate() - 2);
+      start = d.toISOString().substring(0, 10);
+    }
 
     labels.push(titel);
     dataPoints.push([start, faellig]);
 
-    // Farbe nach Status/Priorität
+    // Korrekte Min/Max Grenzen der gefilterten Daten ermitteln
+    if (!minDate || start < minDate) minDate = start;
+    if (!maxDate || faellig > maxDate) maxDate = faellig;
+
+    // Farben nach Status / Priorität
     if (a.Status === "Erledigt") {
       backgroundColors.push("rgba(75, 192, 192, 0.7)");
     } else if (a.Prioritaet === "P1Dringend") {
@@ -189,6 +213,8 @@ function rendereGantt() {
       scales: {
         x: {
           type: "time",
+          min: minDate,
+          max: maxDate,
           time: {
             unit: "day",
             displayFormats: { day: "dd.MM.yyyy" }
@@ -200,7 +226,18 @@ function rendereGantt() {
         }
       },
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: "x"
+          },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: "x"
+          }
+        }
       }
     }
   });
