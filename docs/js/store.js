@@ -353,6 +353,16 @@ const Store = {
     const n = name.trim();
     if (this._daten.Konfiguration.Bereiche.some((b) => (b || "").trim().toLowerCase() === n.toLowerCase())) return;
     this._daten.Konfiguration.Bereiche.push(n);
+
+    // Automatisch ein Projekt "Allgemein" anlegen, falls im neuen Bereich
+    // noch kein Projekt existiert.
+    const hatBereitsProjekt = this._daten.Projekte.some(
+      (p) => (p.Bereich || "").trim().toLowerCase() === n.toLowerCase()
+    );
+    if (!hatBereitsProjekt) {
+      this._daten.Projekte.push({ Id: neueId(), Name: "Allgemein", Bereich: n });
+    }
+
     this.speichern();
   },
 
