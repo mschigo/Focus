@@ -158,8 +158,12 @@ const App = {
       const row = document.createElement("div");
       row.className = "checkliste-item";
       row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 4px 0;";
+      
+      // Nutzt den Text-Wert unabhängig davon, ob er als .Text oder .text hinterlegt ist
+      const punktText = punkt.Text || punkt.text || "";
+
       row.innerHTML = `
-        <span style="font-size: 13px;">${escapeHtml(punkt.Text)}</span>
+        <span style="font-size: 13px;">${escapeHtml(punktText)}</span>
         <button type="button" class="icon-btn" title="Löschen" data-index="${index}">✕</button>
       `;
 
@@ -172,7 +176,6 @@ const App = {
       container.appendChild(row);
     });
   },
-
   _wireLoginForm() {
     const form = document.getElementById("login-form");
     const modusToggle = document.getElementById("login-modus-toggle");
