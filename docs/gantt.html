@@ -231,6 +231,31 @@ const heuteLiniePlugin = {
   }
 };
 
+function ermittleProjektFarbe(bereichName, projektName) {
+  if (typeof LokaleEinstellungen === "undefined") return null;
+
+  // 1. Prüfen, ob direkt im LocalStorage/LokaleEinstellungen eine Farbe für den Bereich oder das Projekt liegt
+  // Wir prüfen verschiedene Schlüssel-Varianten (Groß-/Kleinschreibung)
+  const einstellungen = LokaleEinstellungen._laden ? LokaleEinstellungen._laden() : {};
+  const farbenMap = einstellungen.bereichFarben || {};
+
+  // Suche nach exakter Übereinstimmung oder Case-Insensitive
+  for (const [key, val] of Object.entries(farbenMap)) {
+    if (key.trim().toLowerCase() === (bereichName || "").trim().toLowerCase() ||
+        key.trim().toLowerCase() === (projektName || "").trim().toLowerCase()) {
+      return val;
+    }
+  }
+
+  // Fallback über die Getter-Methode
+  if (bereichName) {
+    const bColor = LokaleEinstellungen.getBereichFarbe(bereichName);
+    if (bColor) return bColor;
+  }
+
+  return null;
+}
+
 function rendereGantt() {
   const aufgaben = holeGefilterteAufgaben();
   const ctx = document.getElementById("gantt-chart").getContext("2d");
@@ -252,12 +277,12 @@ function rendereGantt() {
   let minDate = null;
   let maxDate = null;
 
-  // Fallback-Farbpalette, falls keine Bereichsfarbe definiert ist
+  // Fallback-Farbpalette, falls absolut keine Farbe definiert ist
   const fallbackFarben = [
-    "rgba(54, 162, 235, 0.7)",  // Blau
-    "rgba(75, 192, 192, 0.7)",  // Türkis
-    "rgba(153, 102, 255, 0.7)", // Lila
-    "rgba(255, 159, 64, 0.7)"   // Orange
+    "rgba(54, 162, 235, 0.7)",  
+    "rgba(75, 192, 192, 0.7)",  
+    "rgba(153, 102, 255, 0.7)", 
+    "rgba(255, 159, 64, 0.7)"   
   ];
   let fallbackIndex = 0;
 
@@ -287,17 +312,10 @@ function rendereGantt() {
     if (!minDate || start < minDate) minDate = start;
     if (!maxDate || faellig > maxDate) maxDate = faellig;
 
-    // Farbzuweisung: Prüfen, ob eine Bereichsfarbe in den LokaleEinstellungen existiert
-    let farbe = null;
-    if (typeof LokaleEinstellungen !== "undefined" && a.Bereich) {
-      const bereichsFarbeHex = LokaleEinstellungen.getBereichFarbe(a.Bereich);
-      if (bereichsFarbeHex) {
-        farbe = bereichsFarbeHex;
-      }
-    }
+    // Farbzuweisung aus den Dashboard-Einstellungen (Bereich / Projekt)
+    let farbe = ermittleProjektFarbe(a.Bereich, a.ProjektName);
 
     if (!farbe) {
-      // Wenn keine benutzerdefinierte Farbe da ist, Fallback nutzen
       farbe = fallbackFarben[fallbackIndex % fallbackFarben.length];
       fallbackIndex++;
     }
