@@ -9,6 +9,15 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+  <style>
+    /* Grab-Cursor für intuitives Verschieben */
+    #gantt-chart {
+      cursor: grab;
+    }
+    #gantt-chart:active {
+      cursor: grabbing;
+    }
+  </style>
 </head>
 <body>
 
@@ -48,7 +57,7 @@
     <div class="card" style="margin-bottom: 24px;">
       <h2 class="card-title">Projekt-Timeline (Fälligkeiten & Zeiträume)</h2>
       <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -8px; margin-bottom: 12px;">
-        💡 Hinweis: Ziehe mit <strong>gedrückter Maustaste</strong>, um die X-Achse zu verschieben. Nutze das <strong>Mausrad zum Zoomen</strong>.
+        💡 Hinweis: Ziehe mit <strong>gedrückter Maustaste</strong>, um die Zeitleiste zu verschieben. Nutze das <strong>Mausrad zum Zoomen</strong>.
       </p>
       <div style="position: relative; height: 450px; width: 100%;">
         <canvas id="gantt-chart"></canvas>
@@ -220,6 +229,10 @@ function rendereGantt() {
       indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: "nearest",
+        intersect: false
+      },
       scales: {
         x: {
           type: "time",
@@ -255,7 +268,7 @@ function rendereGantt() {
           pan: {
             enabled: true,
             mode: "x",
-            modifierKey: null
+            threshold: 5
           },
           zoom: {
             wheel: { enabled: true },
