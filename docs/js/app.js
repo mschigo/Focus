@@ -42,6 +42,10 @@ const App = {
           Dashboard.init();
           Aufgabenliste.init();
           Einstellungen.init();
+
+          // Direktlink von gantt.html/zeitauswertung.html, z. B. "#einstellungen".
+          const hashTab = (location.hash || "").replace("#", "");
+          if (hashTab === "einstellungen") this.wechsleTab(hashTab);
         } else {
           Dashboard.render();
           Einstellungen.render();
@@ -348,8 +352,16 @@ const App = {
   },
 
   wechsleTab(tab) {
+    if (!tab) return;
     document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("is-active", btn.dataset.tab === tab));
     document.querySelectorAll(".view").forEach((view) => view.classList.toggle("is-active", view.id === `view-${tab}`));
+
+    // Hash mitführen, damit Links von gantt.html/zeitauswertung.html (z. B.
+    // "index.html#einstellungen") den richtigen Tab öffnen und ein Reload
+    // auf demselben Tab bleibt.
+    if (window.history?.replaceState) {
+      window.history.replaceState(null, "", `#${tab}`);
+    }
   },
 
   oeffneDetails(aufgabeId) {
