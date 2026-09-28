@@ -24,19 +24,42 @@
 
   <main id="app-main" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
     
-    <!-- Filterleiste: Bereich & Projekt -->
-    <div class="filter-row" style="margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+    <!-- Filterleiste: Bereich, Projekt & Zeitraum -->
+    <div class="filter-row" style="margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
       <div class="filter-group">
         <label class="filter-group__label" for="filter-bereich">Bereich</label>
-        <select id="filter-bereich" class="form-input" style="min-width: 180px;">
+        <select id="filter-bereich" class="form-input" style="min-width: 160px;">
           <option value="Alle">Alle Bereiche</option>
         </select>
       </div>
+
       <div class="filter-group">
         <label class="filter-group__label" for="filter-projekt">Projekt</label>
-        <select id="filter-projekt" class="form-input" style="min-width: 180px;">
+        <select id="filter-projekt" class="form-input" style="min-width: 160px;">
           <option value="Alle">Alle Projekte</option>
         </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-group__label" for="filter-zeitraum-preset">Zeitraum</label>
+        <select id="filter-zeitraum-preset" class="form-input" style="min-width: 150px;">
+          <option value="Alle" selected>Gesamter Zeitraum</option>
+          <option value="DieseWoche">Diese Woche</option>
+          <option value="DieserMonat">Dieser Monat</option>
+          <option value="LetzterMonat">Letzter Monat</option>
+          <option value="DiesesJahr">Dieses Jahr</option>
+
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-group__label" for="filter-von">Von</label>
+        <input type="date" id="filter-von" class="form-input" lang="de-CH" />
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-group__label" for="filter-bis">Bis</label>
+        <input type="date" id="filter-bis" class="form-input" lang="de-CH" />
       </div>
     </div>
 
@@ -106,6 +129,7 @@ async function initAuswertung() {
     console.error("Fehler beim Start der Auswertung", err);
   }
 
+  // Event Listener für Bereich & Projekt
   document.getElementById("filter-bereich").addEventListener("change", (e) => {
     aktualisiereProjektDropdown(e.target.value);
     rendereAuswertung();
@@ -114,6 +138,59 @@ async function initAuswertung() {
   document.getElementById("filter-projekt").addEventListener("change", () => {
     rendereAuswertung();
   });
+
+  // Event Listener für Datum
+  document.getElementById("filter-zeitraum-preset").addEventListener("change", (e) => {
+    setzeZeitraumPreset(e.target.value);
+    rendereAuswertung();
+  });
+
+  document.getElementById("filter-von").addEventListener("change", () => {
+    document.getElementById("filter-zeitraum-preset").value = "Benutzerdefiniert";
+    rendereAuswertung();
+  });
+
+  document.getElementById("filter-bis").addEventListener("change", () => {
+    document.getElementById("filter-zeitraum-preset").value = "Benutzerdefiniert";
+    rendereAuswertung();
+  });
+}
+
+function setzeZeitraumPreset(preset) {
+  const vonEl = document.getElementById("filter-von");
+  const bisEl = document.getElementById("filter-bis");
+  const heute = new Date();
+
+  if (preset === "Alle") {
+    vonEl.value = "";
+    bisEl.value = "";
+    return;
+  }
+
+  let von = new Date();
+  let bis = new Date();
+
+  if (preset === "DieseWoche") {
+    const day = heute.getDay() || 7;
+    von.setDate(heute.getDate() - day + 1);
+    bis.setDate(von.getDate() + 6);
+  } else if (preset === "DieserMonat") {
+    von = new Date(heute.getFullYear(), heute.getMonth(), 1);
+    bis = new Date(heute.getFullYear(), heute.getMonth() + 1, 0);
+  } else if (preset === "LetzterMonat") {
+    von = new Date(heute.getFullYear(), heute.getMonth() - 1, 1);
+    bis = new Date(heute.getFullYear(), heute.getMonth(), 0);
+  } else if (preset === "DiesesJahr") {
+    von = new Date(heute.getFullYear(), 0, 1);
+    bis = new Date(heute.getFullYear(), 11, 31);
+  }
+
+  vonEl.value = formatDatumIso(von);
+  bisEl.value = formatDatumIso(bis);
+}
+
+function formatDatumIso(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function initalisiereFilter() {
@@ -150,14 +227,34 @@ function aktualisiereProjektDropdown(bereich) {
 function holeGefilterteAufgaben() {
   const gewaehlterBereich = document.getElementById("filter-bereich").value;
   const gewaehltesProjekt = document.getElementById("filter-projekt").value;
+  const vonDatum = document.getElementById("filter-von").value;
+  const bisDatum = document.getElementById("filter-bis").value;
+
   let aufgaben = Store.getAufgaben();
 
+  // 1. Bereichsfilter
   if (gewaehlterBereich !== "Alle") {
     aufgaben = aufgaben.filter(a => (a.Bereich || "").toLowerCase() === gewaehlterBereich.toLowerCase());
   }
 
+  // 2. Projektfilter
   if (gewaehltesProjekt !== "Alle") {
     aufgaben = aufgaben.filter(a => (a.ProjektName || "").toLowerCase() === gewaehltesProjekt.toLowerCase());
+  }
+
+  // 3. Datumsfilter (Fälligkeit oder Erstellungsdatum)
+  if (vonDatum) {
+    aufgaben = aufgaben.filter(a => {
+      const d = a.Faelligkeit || (a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : null);
+      return d && d >= vonDatum;
+    });
+  }
+
+  if (bisDatum) {
+    aufgaben = aufgaben.filter(a => {
+      const d = a.Faelligkeit || (a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : null);
+      return d && d <= bisDatum;
+    });
   }
 
   return aufgaben;
@@ -172,7 +269,6 @@ function rendereAuswertung() {
 
   const projektStats = {};
 
-  // Initialisiere alle vorhandenen Projekte aus dem Dropdown
   const gewaehlterBereich = document.getElementById("filter-bereich").value;
   const projekteInAuswahl = Store.getProjekte(gewaehlterBereich === "Alle" ? null : gewaehlterBereich);
   projekteInAuswahl.forEach(p => {
@@ -271,7 +367,7 @@ function rendereTabelle(aufgaben) {
     .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
   if (alleAufgaben.length === 0) {
-    container.innerHTML = `<p style="color: var(--color-text-muted); font-size: 13px;">Keine Aufgaben für diese Filterauswahl vorhanden.</p>`;
+    container.innerHTML = `<p style="color: var(--color-text-muted); font-size: 13px;">Keine Aufgaben für diesen Zeitraum/Filter vorhanden.</p>`;
     return;
   }
 
@@ -281,6 +377,7 @@ function rendereTabelle(aufgaben) {
         <tr style="border-bottom: 1px solid var(--color-border, #ccc); padding-bottom: 8px;">
           <th style="padding: 8px;">Titel</th>
           <th style="padding: 8px;">Projekt</th>
+          <th style="padding: 8px;">Fälligkeit / Datum</th>
           <th style="padding: 8px;">Soll</th>
           <th style="padding: 8px;">Ist</th>
           <th style="padding: 8px;">Abweichung</th>
@@ -292,11 +389,13 @@ function rendereTabelle(aufgaben) {
   alleAufgaben.forEach(a => {
     const diffText = `${a.diff >= 0 ? "+" : ""}${a.diff.toFixed(1)}h`;
     const diffColor = a.diff > 0 ? "var(--color-p1)" : (a.diff < 0 ? "#2e7d32" : "inherit");
+    const datum = a.Faelligkeit || (a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : "-");
 
     html += `
       <tr style="border-bottom: 1px solid var(--color-border, #eee);">
         <td style="padding: 8px;">${escapeHtml(a.Titel)}</td>
         <td style="padding: 8px; color: var(--color-text-muted);">${escapeHtml(a.ProjektName || "-")}</td>
+        <td style="padding: 8px; color: var(--color-text-muted);">${datum}</td>
         <td style="padding: 8px;">${a.soll.toFixed(1)}h</td>
         <td style="padding: 8px;">${a.ist.toFixed(1)}h</td>
         <td style="padding: 8px; font-weight: bold; color: ${diffColor};">${diffText}</td>
