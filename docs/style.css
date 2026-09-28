@@ -737,6 +737,23 @@ select.form-input {
   flex: 1;
 }
 
+.link-feld-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.link-feld-row .form-input {
+  flex: 1;
+}
+
+.link-feld-oeffnen {
+  min-width: 24px;
+  text-align: center;
+  text-decoration: none;
+}
+
 .popup-footer {
   display: flex;
   gap: 8px;

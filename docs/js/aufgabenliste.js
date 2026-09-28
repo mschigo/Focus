@@ -4,6 +4,7 @@
 
 const Aufgabenliste = {
   _checklisteEntwurf: [],
+  _linksEntwurf: [],
 
   init() {
     this._wireDetailsPopupSchliessen();
@@ -27,6 +28,8 @@ const Aufgabenliste = {
       Titel: c.Titel || c.Text || c.text || "",
       IstErledigt: c.IstErledigt || c.Erledigt || c.erledigt || false,
     }));
+
+    this._linksEntwurf = [...(aufgabe.Links || [])];
 
     const headerTitle = document.querySelector("#details-popup .popup__header h2");
     if (headerTitle) headerTitle.textContent = "Aufgabe bearbeiten";
@@ -131,10 +134,10 @@ const Aufgabenliste = {
           <textarea id="edit-notizen" class="form-input" rows="3">${escapeHtml(aufgabe.Notizen || "")}</textarea>
         </div>
 
-        <!-- Link Feld (URLs & Dateipfade) -->
+        <!-- Link-/Pfad-Felder (mehrere möglich, für URLs & Dateipfade) -->
         <div class="form-field">
-          <label for="edit-link">Link / Pfad</label>
-          <input type="text" id="edit-link" class="form-input" value="${escapeHtml(aufgabe.Link || "")}" placeholder="https://… oder file:///…" />
+          <label>Link / Pfad</label>
+          <div id="edit-links-container"></div>
         </div>
 
         <div class="form-field">
@@ -157,6 +160,7 @@ const Aufgabenliste = {
 
     this._renderPrioritaetChips(aufgabe.Prioritaet);
     this._renderChecklisteEntwurf();
+    Linkfelder.render(document.getElementById("edit-links-container"), this._linksEntwurf, () => {});
 
     const bereichSelect = document.getElementById("edit-bereich");
     const projektSelect = document.getElementById("edit-projekt");
@@ -346,7 +350,7 @@ const Aufgabenliste = {
       Startdatum: aufgabe.Startdatum || null,
       Faelligkeit: aufgabe.Faelligkeit || null,
       Notizen: aufgabe.Notizen,
-      Link: aufgabe.Link,
+      Links: [...(aufgabe.Links || [])],
       SollZeit: aufgabe.SollZeit || 0,
       IstZeit: aufgabe.IstZeit || 0,
       Checkliste: (aufgabe.Checkliste || []).map((c) => ({
@@ -391,7 +395,7 @@ const Aufgabenliste = {
         SollZeit: parseFloat(sollZeit) || 0,
         IstZeit: parseFloat(istZeit) || 0,
         Notizen: document.getElementById("edit-notizen")?.value.trim() || "",
-        Link: document.getElementById("edit-link")?.value.trim() || "",
+        Links: this._linksEntwurf.map((l) => l.trim()).filter(Boolean),
         Checkliste: this._checklisteEntwurf,
       });
 

@@ -3,6 +3,7 @@
  */
 
 let tempNeueCheckliste = [];
+let tempNeueLinks = [""];
 
 // Lokale Hilfsfunktionen als Fallback
 function appEscapeHtml(text) {
@@ -108,8 +109,9 @@ const App = {
       startManuellGeaendert = false;
       faelligManuellGeaendert = false;
 
-      const linkEl = document.getElementById("neu-link");
-      if (linkEl) linkEl.value = "";
+      tempNeueLinks = [""];
+      const linksContainer = document.getElementById("neu-links-container");
+      if (linksContainer) Linkfelder.render(linksContainer, tempNeueLinks, () => {});
 
       const sollEl = document.getElementById("neu-sollzeit");
       if (sollEl) sollEl.value = "";
@@ -212,7 +214,7 @@ const App = {
         Startdatum: finalStart,
         Faelligkeit: finalFaellig,
         Notizen: document.getElementById("neu-notizen")?.value || "",
-        Link: document.getElementById("neu-link")?.value || "",
+        Links: tempNeueLinks.map((l) => l.trim()).filter(Boolean),
         SollZeit: parseFloat(document.getElementById("neu-sollzeit")?.value) || 0,
         IstZeit: parseFloat(document.getElementById("neu-istzeit")?.value) || 0,
         Status: AufgabenStatus.Offen,
@@ -222,6 +224,7 @@ const App = {
       try {
         Store.addOrUpdateAufgabe(neueAufgabe);
         tempNeueCheckliste = [];
+        tempNeueLinks = [""];
         if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Aufgabe erstellt.");
         schliessePopup();
       } catch (err) {

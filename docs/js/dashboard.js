@@ -253,14 +253,16 @@ const Dashboard = {
       zeitHtml = ` <span class="checkliste-progress-badge" title="Zeit: ${ist}h von ${soll}h">⏱ ${ist}h${soll > 0 ? ` / ${soll}h` : ""}</span>`;
     }
 
-    // 3. Datei- / Web-Link Badge
-    let linkHtml = "";
-    if (aufgabe.Link && aufgabe.Link.trim()) {
-      const rawLink = aufgabe.Link.trim();
-      const istDatei = rawLink.startsWith("file://") || rawLink.includes(":\\") || rawLink.startsWith("\\\\");
-      const icon = istDatei ? "📁" : "🔗";
-      linkHtml = ` <a href="${escapeHtml(rawLink)}" target="_blank" onclick="event.stopPropagation();" class="checkliste-progress-badge" style="text-decoration: none; color: inherit;" title="${escapeHtml(rawLink)}">${icon} Link</a>`;
-    }
+    // 3. Datei- / Web-Link Badges (mehrere Links möglich)
+    const links = aufgabe.Links || [];
+    const linkHtml = links
+      .map((link) => {
+        const rawLink = (link || "").trim();
+        if (!rawLink) return "";
+        const icon = istDateiPfad(rawLink) ? "📁" : "🔗";
+        return ` <a href="${escapeHtml(rawLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="checkliste-progress-badge" style="text-decoration: none; color: inherit;" title="${escapeHtml(rawLink)}">${icon}</a>`;
+      })
+      .join("");
 
     row.innerHTML = `
       <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}" style="cursor: pointer; padding: 4px;" title="Status ändern">${Anzeige.statusSymbol(aufgabe.Status)}</span>

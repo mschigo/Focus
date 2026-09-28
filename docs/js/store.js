@@ -53,6 +53,23 @@ function wochenEndeIso(heute) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Erkennt, ob ein Link/Pfad auf eine lokale Datei zeigt (statt auf eine Web-URL).
+function istDateiPfad(text) {
+  if (!text) return false;
+  const t = text.trim();
+  return t.startsWith("file://") || t.includes(":\\") || t.startsWith("\\\\");
+}
+
+// Liest die Links einer Aufgabe: neues Format ist ein Array "Links", ältere
+// Aufgaben hatten nur ein einzelnes Feld "Link" (String) – wird transparent migriert.
+function linksAusAufgabe(a) {
+  if (Array.isArray(a.Links) && a.Links.some((l) => l && l.trim())) {
+    return a.Links.map((l) => (l || "").trim()).filter(Boolean);
+  }
+  if (a.Link && a.Link.trim()) return [a.Link.trim()];
+  return [];
+}
+
 function normalisiereDaten(parsed) {
   const bereichFarben = parsed?.Konfiguration?.BereichFarben;
   return {
@@ -201,6 +218,7 @@ const Store = {
         IstUeberfaellig: istUeberfaellig,
         Startdatum: a.Startdatum || null,
         Checkliste: a.Checkliste || [],
+        Links: linksAusAufgabe(a),
         SollZeit: parseFloat(a.SollZeit) || 0,
         IstZeit: parseFloat(a.IstZeit) || 0,
       };
@@ -269,7 +287,7 @@ const Store = {
         Startdatum: aufgabe.Startdatum || null,
         Faelligkeit: aufgabe.Faelligkeit || null,
         Notizen: aufgabe.Notizen || "",
-        Link: aufgabe.Link || "",
+        Links: Array.isArray(aufgabe.Links) ? aufgabe.Links.map((l) => (l || "").trim()).filter(Boolean) : [],
         Checkliste: aufgabe.Checkliste || [],
         SollZeit: parseFloat(aufgabe.SollZeit) || 0,
         IstZeit: parseFloat(aufgabe.IstZeit) || 0,
@@ -288,7 +306,7 @@ const Store = {
         Startdatum: aufgabe.Startdatum || null,
         Faelligkeit: aufgabe.Faelligkeit || null,
         Notizen: aufgabe.Notizen || "",
-        Link: aufgabe.Link || "",
+        Links: Array.isArray(aufgabe.Links) ? aufgabe.Links.map((l) => (l || "").trim()).filter(Boolean) : [],
         Checkliste: aufgabe.Checkliste || [],
         SollZeit: parseFloat(aufgabe.SollZeit) || 0,
         IstZeit: parseFloat(aufgabe.IstZeit) || 0,
@@ -498,6 +516,85 @@ const Anzeige = {
     el.hidden = false;
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
+  },
+};
+
+/**
+ * Dynamische Link-/Pfad-Felder (Neue Aufgabe & Bearbeiten-Popup).
+ * Sobald das letzte Feld befüllt wird, erscheint automatisch ein weiteres
+ * leeres Feld. Jedes befüllte Feld bekommt einen Öffnen-Button, der Web-Links
+ * bzw. Dateipfade erkennt und anklickbar macht.
+ */
+const Linkfelder = {
+  render(container, werte, onChange) {
+    if (!container) return;
+    if (werte.length === 0) werte.push("");
+
+    container.innerHTML = "";
+    werte.forEach((_wert, index) => this._renderZeile(container, werte, index, onChange));
+  },
+
+  _renderZeile(container, werte, index, onChange) {
+    const row = document.createElement("div");
+    row.className = "link-feld-row";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "form-input";
+    input.placeholder = "https://… oder file:///…";
+    input.value = werte[index] || "";
+
+    const oeffnenBtn = document.createElement("a");
+    oeffnenBtn.className = "icon-btn link-feld-oeffnen";
+    oeffnenBtn.target = "_blank";
+    oeffnenBtn.rel = "noopener";
+    oeffnenBtn.title = "Öffnen";
+    oeffnenBtn.addEventListener("click", (e) => {
+      if (!oeffnenBtn.getAttribute("href")) e.preventDefault();
+    });
+
+    const entfernenBtn = document.createElement("button");
+    entfernenBtn.type = "button";
+    entfernenBtn.className = "icon-btn";
+    entfernenBtn.title = "Entfernen";
+    entfernenBtn.textContent = "✕";
+
+    const aktualisiereOeffnenBtn = () => {
+      const wert = (input.value || "").trim();
+      if (wert) {
+        oeffnenBtn.setAttribute("href", wert);
+        oeffnenBtn.textContent = istDateiPfad(wert) ? "📁" : "🔗";
+      } else {
+        oeffnenBtn.removeAttribute("href");
+        oeffnenBtn.textContent = "";
+      }
+    };
+    aktualisiereOeffnenBtn();
+
+    input.addEventListener("input", () => {
+      werte[index] = input.value;
+      aktualisiereOeffnenBtn();
+
+      // Letztes Feld gerade befüllt? -> neues leeres Feld anhängen (ohne Fokus zu verlieren).
+      if (index === werte.length - 1 && input.value.trim()) {
+        werte.push("");
+        this._renderZeile(container, werte, werte.length - 1, onChange);
+      }
+
+      onChange(werte);
+    });
+
+    entfernenBtn.addEventListener("click", () => {
+      werte.splice(index, 1);
+      if (werte.length === 0) werte.push("");
+      this.render(container, werte, onChange);
+      onChange(werte);
+    });
+
+    row.appendChild(input);
+    row.appendChild(oeffnenBtn);
+    row.appendChild(entfernenBtn);
+    container.appendChild(row);
   },
 };
 
