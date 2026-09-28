@@ -381,17 +381,32 @@ main {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--color-text);
-  color: white;
+  background: #212121;
+  color: #FFFFFF;
   padding: 10px 18px;
   border-radius: 999px;
   font-size: 13px;
   box-shadow: var(--shadow);
   z-index: 100;
+  border: 1px solid var(--color-border);
+}
+
+/* Im Dark Mode: Hellgrauer Hintergrund mit dunkler Schrift für hohen Kontrast */
+:root[data-theme="dark"] .toast {
+  background: #E0E0E0;
+  color: #121212;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .toast {
+    background: #E0E0E0;
+    color: #121212;
+  }
 }
 
 .toast.is-error {
-  background: var(--color-p1);
+  background: var(--color-p1) !important;
+  color: #FFFFFF !important;
 }
 
 /* ---------- Popup ---------- */
