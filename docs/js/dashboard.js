@@ -189,23 +189,39 @@ const Dashboard = {
   _renderKpis(kpis) {
     const container = document.getElementById("dashboard-kpis");
     const karten = [
-      { label: "📌 Offen gesamt", value: kpis.offeneGesamt, cls: "" },
-      { label: "🔴 P1 Dringend", value: kpis.offenP1, cls: "kpi-card--p1" },
-      { label: "🟠 P2 Wichtig", value: kpis.offenP2, cls: "kpi-card--p2" },
-      { label: "📆 Heute fällig", value: kpis.heuteFaellig, cls: "" },
-      { label: "🗓️ Diese Woche", value: kpis.dieseWocheFaellig, cls: "" },
-      { label: "⏰ Überfällig", value: kpis.ueberfaellig, cls: kpis.ueberfaellig > 0 ? "kpi-card--warn" : "" },
+      { label: "📌 Offen gesamt", value: kpis.offeneGesamt, cls: "", filter: "Alle" },
+      { label: "🔴 P1 Dringend", value: kpis.offenP1, cls: "kpi-card--p1", filter: "P1" },
+      { label: "🟠 P2 Wichtig", value: kpis.offenP2, cls: "kpi-card--p2", filter: "P2" },
+      { label: "📆 Heute fällig", value: kpis.heuteFaellig, cls: "", filter: "Heute" },
+      { label: "🗓️ Diese Woche", value: kpis.dieseWocheFaellig, cls: "", filter: "DieseWoche" },
+      { label: "⏰ Überfällig", value: kpis.ueberfaellig, cls: kpis.ueberfaellig > 0 ? "kpi-card--warn" : "", filter: "Ueberfaellig" },
     ];
 
     container.innerHTML = karten
       .map(
         (k) => `
-      <div class="kpi-card ${k.cls}">
+      <div class="kpi-card ${k.cls}" data-filter="${k.filter}" role="button" tabindex="0" title="Filter anwenden">
         <div class="kpi-card__value">${k.value}</div>
         <div class="kpi-card__label">${k.label}</div>
       </div>`
       )
       .join("");
+
+    container.querySelectorAll(".kpi-card").forEach((el) => {
+      const anwenden = () => {
+        const filter = el.dataset.filter;
+        this.setAnsichtsFilter(filter);
+        const select = document.getElementById("dashboard-ansicht-filter");
+        if (select) select.value = filter;
+      };
+      el.addEventListener("click", anwenden);
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          anwenden();
+        }
+      });
+    });
   },
 
   _renderAufgabenListe(items) {

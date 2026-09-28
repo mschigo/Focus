@@ -228,6 +228,21 @@ main {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 12px 14px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.kpi-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.kpi-card:active {
+  transform: scale(0.97);
+}
+
+.kpi-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .kpi-card__value {
