@@ -104,7 +104,7 @@ const Dashboard = {
 
     const offen = aufgaben.filter((a) => a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit);
 
-    // KPI-Übersichtskarten berechnen (berechnen sich weiterhin auf Basis der offenen Aufgaben)
+    // KPI-Übersichtskarten berechnen
     const heute = heuteIso();
     const wochenEnde = wochenEndeIso(heute);
     const kpis = {
@@ -117,7 +117,7 @@ const Dashboard = {
     };
     this._renderKpis(kpis);
 
-    // Filter auf alle Aufgaben anwenden (damit "Erledigt" die erledigten aus der Gesamtheit filtern kann)
+    // Filter auf alle Aufgaben anwenden
     const gefiltert = this._gefiltert(aufgaben);
     const sortiert = this._sortiereNachPrioUndFaelligkeit(gefiltert);
     this._renderAufgabenListe(sortiert);
@@ -214,12 +214,21 @@ const Dashboard = {
     row.className = "aufgabe-row";
     row.addEventListener("click", () => App.oeffneDetails(aufgabe.Id));
 
-    // Falls keine eigene Farbe für den Bereich hinterlegt ist, Fallback-Grau nutzen
     const bereichFarbe = LokaleEinstellungen.getBereichFarbe(aufgabe.Bereich) || "#888888";
     row.style.borderLeftColor = bereichFarbe;
 
     const heute = heuteIso();
     const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.Status !== AufgabenStatus.Erledigt;
+
+    // Checklisten-Fortschritt berechnen
+    const checkliste = aufgabe.Checkliste || [];
+    const anzahlGesamt = checkliste.length;
+    let checklisteHtml = "";
+
+    if (anzahlGesamt > 0) {
+      const anzahlErledigt = checkliste.filter((p) => p.IstErledigt || p.Erledigt || p.erledigt).length;
+      checklisteHtml = ` <span class="badge" style="background: var(--color-p3-bg); color: var(--color-text-muted); font-weight: normal; margin-left: 6px;" title="Checkliste: ${anzahlErledigt} von ${anzahlGesamt} erledigt">☑ ${anzahlErledigt}/${anzahlGesamt}</span>`;
+    }
 
     row.innerHTML = `
       <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}">${Anzeige.statusSymbol(aufgabe.Status)}</span>
@@ -230,6 +239,7 @@ const Dashboard = {
           <span class="bereich-farbe-dot" style="background:${bereichFarbe};"></span>
           ${escapeHtml(aufgabe.Bereich || "")}
           ${aufgabe.ProjektName ? " · " + escapeHtml(aufgabe.ProjektName) : ""}
+          ${checklisteHtml}
         </div>
       </div>
       ${aufgabe.Faelligkeit ? `<span class="faellig-tag ${istUeberfaellig ? "is-ueberfaellig" : ""}">${Anzeige.faelligkeitText(aufgabe.Faelligkeit)}</span>` : ""}
