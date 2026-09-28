@@ -2,22 +2,20 @@
  * Focus Web – Navigation, Login-Ablauf & Bootstrap.
  */
 
+let tempNeueCheckliste = [];
+
 const App = {
   _viewsInitialisiert: false,
 
   async init() {
     this._wireLoginForm();
     this._wireAllgemeineUi();
+    this._wireNeueAufgabeForm();
 
     Store.onAuthChange((eingeloggt) => {
       if (eingeloggt) {
         this._zeigeAppShell();
 
-        // Supabase meldet "eingeloggt" bei bestehender Sitzung mehrfach
-        // (z. B. beim Laden UND direkt danach erneut, oder bei einer
-        // Token-Erneuerung im Hintergrund). Die Event-Handler der Views
-        // dürfen deshalb nur einmal verdrahtet werden – sonst legt ein
-        // einziges Absenden des Formulars die Aufgabe mehrfach an.
         if (!this._viewsInitialisiert) {
           this._viewsInitialisiert = true;
           Dashboard.init();
@@ -56,6 +54,122 @@ const App = {
 
     document.getElementById("logout-btn").addEventListener("click", async () => {
       await Store.abmelden();
+    });
+  },
+
+  _wireNeueAufgabeForm() {
+    // Button auf Dashboard öffnet Popup
+    document.getElementById("dashboard-fab-neue-aufgabe")?.addEventListener("click", () => {
+      document.getElementById("neue-aufgabe-form").reset();
+      document.getElementById("neu-link").value = "";
+      tempNeueCheckliste = [];
+      this._renderNeueCheckliste();
+
+      const bereiche = Store.getBereiche();
+      const bereichSelect = document.getElementById("neu-bereich");
+      bereichSelect.innerHTML = bereiche.map(b => `<option value="${b}">${escapeHtml(b)}</option>`).join("");
+
+      this._updateNeuProjektDropdown();
+
+      document.getElementById("neue-aufgabe-popup").hidden = false;
+      document.getElementById("neu-titel").focus();
+    });
+
+    // Bereichsänderung aktualisiert Projekt-Dropdown
+    document.getElementById("neu-bereich")?.addEventListener("change", () => this._updateNeuProjektDropdown());
+
+    // Schließen / Abbrechen Handlers
+    const schliessePopup = () => {
+      document.getElementById("neue-aufgabe-popup").hidden = true;
+    };
+    document.getElementById("neue-aufgabe-popup-close")?.addEventListener("click", schliessePopup);
+    document.getElementById("neue-aufgabe-abbrechen-btn")?.addEventListener("click", schliessePopup);
+
+    // Checklistenpunkt hinzufügen Button
+    document.getElementById("neu-checkliste-add-btn")?.addEventListener("click", () => {
+      const input = document.getElementById("neu-checkliste-input");
+      const text = input.value.trim();
+      if (text) {
+        tempNeueCheckliste.push({ Id: crypto.randomUUID(), Text: text, IstErledigt: false });
+        input.value = "";
+        this._renderNeueCheckliste();
+      }
+    });
+
+    // Enter-Taste im Checklisten-Input abfangen
+    document.getElementById("neu-checkliste-input")?.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        document.getElementById("neu-checkliste-add-btn").click();
+      }
+    });
+
+    // Formular Absenden
+    document.getElementById("neue-aufgabe-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const titel = document.getElementById("neu-titel").value.trim();
+      if (!titel) return;
+
+      const neueAufgabe = {
+        Id: crypto.randomUUID(),
+        Titel: titel,
+        Bereich: document.getElementById("neu-bereich").value,
+        ProjektName: document.getElementById("neu-projekt").value,
+        Prioritaet: document.getElementById("neu-prioritaet").value,
+        Faelligkeit: document.getElementById("neu-faelligkeit").value || null,
+        Notizen: document.getElementById("neu-notizen").value || "",
+        Link: document.getElementById("neu-link").value || "",
+        Status: "Offen",
+        Checkliste: tempNeueCheckliste,
+        ErstelltAm: new Date().toISOString(),
+        GeaendertAm: new Date().toISOString(),
+        IstAktiv: true
+      };
+
+      await Store.addAufgabe(neueAufgabe);
+      if (typeof Toast !== "undefined") Toast.show("Aufgabe erstellt.");
+      schliessePopup();
+    });
+  },
+
+  _updateNeuProjektDropdown() {
+    const bereich = document.getElementById("neu-bereich").value;
+    const projekte = Store.getProjekte(bereich);
+    const projektSelect = document.getElementById("neu-projekt");
+
+    if (projekte.length === 0) {
+      projektSelect.innerHTML = `<option value="Allgemein">Allgemein</option>`;
+    } else {
+      projektSelect.innerHTML = projekte.map(p => `<option value="${p.Name}">${escapeHtml(p.Name)}</option>`).join("");
+    }
+  },
+
+  _renderNeueCheckliste() {
+    const container = document.getElementById("neu-checkliste-container");
+    container.innerHTML = "";
+
+    if (tempNeueCheckliste.length === 0) {
+      container.innerHTML = `<span style="font-size: 13px; color: var(--color-text-muted);">Noch keine Punkte.</span>`;
+      return;
+    }
+
+    tempNeueCheckliste.forEach((punkt, index) => {
+      const row = document.createElement("div");
+      row.className = "checkliste-item";
+      row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 4px 0;";
+      row.innerHTML = `
+        <span style="font-size: 13px;">${escapeHtml(punkt.Text)}</span>
+        <button type="button" class="icon-btn" title="Löschen" data-index="${index}">✕</button>
+      `;
+
+      row.querySelector("button").addEventListener("click", (e) => {
+        const idx = e.target.getAttribute("data-index");
+        tempNeueCheckliste.splice(idx, 1);
+        this._renderNeueCheckliste();
+      });
+
+      container.appendChild(row);
     });
   },
 
@@ -115,7 +229,6 @@ const App = {
     document.querySelectorAll(".view").forEach((view) => view.classList.toggle("is-active", view.id === `view-${tab}`));
   },
 
-  /** Öffnet das Bearbeiten-Popup (Dashboard und Aufgabenliste nutzen dasselbe Popup). */
   oeffneDetails(aufgabeId) {
     Aufgabenliste.oeffneBearbeitenPopup(aufgabeId);
   },
@@ -124,7 +237,5 @@ const App = {
     document.getElementById("details-popup").hidden = true;
   },
 };
-
-// escapeHtml() ist bereits in dashboard.js definiert und global verfügbar.
 
 document.addEventListener("DOMContentLoaded", () => App.init());
