@@ -528,7 +528,13 @@ const Anzeige = {
 const Linkfelder = {
   render(container, werte, onChange) {
     if (!container) return;
-    if (werte.length === 0) werte.push("");
+
+    // Immer ein leeres Feld am Ende bereithalten – auch wenn bereits
+    // bestehende (gefüllte) Links vorhanden sind, z. B. beim Öffnen einer
+    // vorhandenen Aufgabe.
+    if (werte.length === 0 || (werte[werte.length - 1] || "").trim()) {
+      werte.push("");
+    }
 
     container.innerHTML = "";
     werte.forEach((_wert, index) => this._renderZeile(container, werte, index, onChange));
