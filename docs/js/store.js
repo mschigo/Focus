@@ -1,5 +1,7 @@
 /**
- * Focus Web – Datenmodell & Speicher (store.js).
+ * Focus Web – Datenmodell & Speicher.
+ *
+ * Datenformat entspricht der aufgaben.json aus der MAUI-App.
  */
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -157,20 +159,25 @@ const Store = {
     if (!this._daten) throw new Error("Daten sind noch nicht geladen.");
   },
 
+  /** Korrigierte getAufgaben() mit allen Feldern für das Dashboard */
   getAufgaben() {
     this._pruefeGeladen();
+
     const projektLookup = new Map(this._daten.Projekte.map((p) => [p.Id, p]));
     const heute = heuteIso();
 
     return this._daten.Aufgaben.map((a) => {
       const projekt = projektLookup.get(a.ProjektId);
       const istAktiv = a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit;
+      const istUeberfaellig = !!a.Faelligkeit && a.Faelligkeit < heute && istAktiv;
 
       return {
         ...a,
         Bereich: projekt ? projekt.Bereich : "",
         ProjektName: projekt ? projekt.Name : "",
         IstAktiv: istAktiv,
+        IstAbgeschwaecht: a.Status === AufgabenStatus.Erledigt,
+        IstUeberfaellig: istUeberfaellig,
         Checkliste: a.Checkliste || []
       };
     });
@@ -178,7 +185,16 @@ const Store = {
 
   getBereiche() {
     this._pruefeGeladen();
-    return this._daten.Konfiguration.Bereiche;
+    const gesehen = new Set();
+    const ergebnis = [];
+    for (const b of this._daten.Konfiguration.Bereiche) {
+      if (!b || !b.trim()) continue;
+      const key = b.trim().toLowerCase();
+      if (gesehen.has(key)) continue;
+      gesehen.add(key);
+      ergebnis.push(b.trim());
+    }
+    return ergebnis;
   },
 
   getProjekte(bereich = null) {
@@ -235,10 +251,36 @@ const Store = {
     this.speichern();
   },
 
+  setAufgabenStatus(id, status) {
+    this._pruefeGeladen();
+    const aufgabe = this._daten.Aufgaben.find((a) => a.Id === id);
+    if (!aufgabe) return;
+
+    aufgabe.Status = status;
+    aufgabe.GeaendertAm = nowIso();
+    this.speichern();
+  },
+
+  addBereich(name) {
+    this._pruefeGeladen();
+    if (!name || !name.trim()) return;
+    const n = name.trim();
+    if (this._daten.Konfiguration.Bereiche.some((b) => (b || "").trim().toLowerCase() === n.toLowerCase())) return;
+    this._daten.Konfiguration.Bereiche.push(n);
+    this.speichern();
+  },
+
   addProjekt(bereich, name) {
     this._pruefeGeladen();
+    if (!bereich || !bereich.trim()) throw new Error("Bereich ist erforderlich.");
+    if (!name || !name.trim()) throw new Error("Projektname ist erforderlich.");
+
     const b = bereich.trim();
     const n = name.trim();
+
+    if (!this._daten.Konfiguration.Bereiche.some((x) => (x || "").trim().toLowerCase() === b.toLowerCase())) {
+      this._daten.Konfiguration.Bereiche.push(b);
+    }
 
     const projekt = { Id: neueId(), Name: n, Bereich: b };
     this._daten.Projekte.push(projekt);
@@ -246,3 +288,117 @@ const Store = {
     return projekt;
   }
 };
+
+const Anzeige = {
+  prioritaetBadgeClass(prioritaet) {
+    switch (prioritaet) {
+      case Prioritaet.P1Dringend: return "badge--p1";
+      case Prioritaet.P2Wichtig: return "badge--p2";
+      case Prioritaet.P4Spaeter: return "badge--p4";
+      default: return "badge--p3";
+    }
+  },
+
+  prioritaetText(prioritaet) {
+    switch (prioritaet) {
+      case Prioritaet.P1Dringend: return "P1";
+      case Prioritaet.P2Wichtig: return "P2";
+      case Prioritaet.P4Spaeter: return "P4";
+      default: return "P3";
+    }
+  },
+
+  statusSymbol(status) {
+    switch (status) {
+      case AufgabenStatus.InArbeit: return "⏱";
+      case AufgabenStatus.Erledigt: return "✓";
+      default: return "○";
+    }
+  },
+
+  statusDotClass(status) {
+    switch (status) {
+      case AufgabenStatus.InArbeit: return "status-dot--inarbeit";
+      case AufgabenStatus.Erledigt: return "status-dot--erledigt";
+      default: return "status-dot--offen";
+    }
+  },
+
+  faelligkeitText(isoDatum) {
+    if (!isoDatum) return "";
+    const [jahr, monat, tag] = isoDatum.split("-");
+    return `${tag}.${monat}.${jahr}`;
+  },
+
+  zeigeToast(nachricht, istFehler = false) {
+    const el = document.getElementById("toast");
+    if (!el) return;
+    el.textContent = nachricht;
+    el.classList.toggle("is-error", istFehler);
+    el.hidden = false;
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
+  },
+};
+
+const LOKALE_EINSTELLUNGEN_KEY = "focus.lokaleEinstellungen.v1";
+
+function anwendenDarkMode(value) {
+  if (value === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else if (value === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+const LokaleEinstellungen = {
+  _daten: null,
+
+  _laden() {
+    if (this._daten) return this._daten;
+    try {
+      const raw = localStorage.getItem(LOKALE_EINSTELLUNGEN_KEY);
+      this._daten = raw ? JSON.parse(raw) : {};
+    } catch {
+      this._daten = {};
+    }
+    this._daten.bereichFarben ??= {};
+    return this._daten;
+  },
+
+  _speichern() {
+    localStorage.setItem(LOKALE_EINSTELLUNGEN_KEY, JSON.stringify(this._daten));
+  },
+
+  getBereichFarbe(bereichName) {
+    if (!bereichName) return "";
+    return this._laden().bereichFarben[bereichName.trim()] || "";
+  },
+
+  setBereichFarbe(bereichName, hex) {
+    if (!bereichName || !bereichName.trim()) return;
+    const d = this._laden();
+    const key = bereichName.trim();
+    if (!hex) {
+      delete d.bereichFarben[key];
+    } else {
+      d.bereichFarben[key] = hex;
+    }
+    this._speichern();
+  },
+
+  getDarkMode() {
+    return this._laden().darkMode ?? null;
+  },
+
+  setDarkMode(value) {
+    const d = this._laden();
+    d.darkMode = value;
+    this._speichern();
+    anwendenDarkMode(value);
+  },
+};
+
+anwendenDarkMode(LokaleEinstellungen.getDarkMode());
