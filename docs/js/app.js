@@ -79,10 +79,35 @@ const App = {
   },
 
   _wireNeueAufgabeForm() {
+    let startManuellGeaendert = false;
+    let faelligManuellGeaendert = false;
+
+    const startEl = document.getElementById("neu-startdatum");
+    const faelligEl = document.getElementById("neu-faelligkeit");
+
+    if (startEl && faelligEl) {
+      startEl.addEventListener("input", () => {
+        startManuellGeaendert = true;
+        if (!faelligManuellGeaendert || !faelligEl.value) {
+          faelligEl.value = startEl.value;
+        }
+      });
+
+      faelligEl.addEventListener("input", () => {
+        faelligManuellGeaendert = true;
+        if (!startManuellGeaendert || !startEl.value) {
+          startEl.value = faelligEl.value;
+        }
+      });
+    }
+
     // Button auf Dashboard öffnet Popup
     document.getElementById("dashboard-fab-neue-aufgabe")?.addEventListener("click", () => {
       document.getElementById("neue-aufgabe-form").reset();
       
+      startManuellGeaendert = false;
+      faelligManuellGeaendert = false;
+
       const linkEl = document.getElementById("neu-link");
       if (linkEl) linkEl.value = "";
 
@@ -92,8 +117,8 @@ const App = {
       const istEl = document.getElementById("neu-istzeit");
       if (istEl) istEl.value = "";
 
-      const startEl = document.getElementById("neu-startdatum");
       if (startEl) startEl.value = "";
+      if (faelligEl) faelligEl.value = "";
 
       tempNeueCheckliste = [];
       this._renderNeueCheckliste();
@@ -173,13 +198,19 @@ const App = {
         return;
       }
 
+      // Falls Enddatum gesetzt ist aber Startdatum fehlt, wird Startdatum gleich Enddatum gesetzt
+      let finalStart = document.getElementById("neu-startdatum")?.value || null;
+      let finalFaellig = document.getElementById("neu-faelligkeit")?.value || null;
+      if (finalFaellig && !finalStart) finalStart = finalFaellig;
+      if (finalStart && !finalFaellig) finalFaellig = finalStart;
+
       const neueAufgabe = {
         Id: appNeueId(),
         Titel: titel,
         ProjektId: projekt.Id,
         Prioritaet: document.getElementById("neu-prioritaet")?.value || Prioritaet.P3Normal,
-        Startdatum: document.getElementById("neu-startdatum")?.value || null,
-        Faelligkeit: document.getElementById("neu-faelligkeit")?.value || null,
+        Startdatum: finalStart,
+        Faelligkeit: finalFaellig,
         Notizen: document.getElementById("neu-notizen")?.value || "",
         Link: document.getElementById("neu-link")?.value || "",
         SollZeit: parseFloat(document.getElementById("neu-sollzeit")?.value) || 0,
