@@ -61,14 +61,18 @@
     <!-- ===================== DASHBOARD ===================== -->
     <section id="view-dashboard" class="view is-active">
 
-      <div class="filter-row" id="dashboard-filter-row">
+      <div class="filter-row dashboard-controls" id="dashboard-filter-row">
         <div class="filter-group">
-          <span class="filter-group__label">Bereich</span>
-          <div class="chip-list" id="dashboard-bereich-filter"></div>
+          <label class="filter-group__label" for="dashboard-sortierung">Sortierung</label>
+          <select id="dashboard-sortierung" class="form-input"></select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-group__label" for="dashboard-bereich-filter">Bereich</label>
+          <select id="dashboard-bereich-filter" class="form-input"></select>
         </div>
         <div class="filter-group" id="dashboard-projekt-filter-group" hidden>
-          <span class="filter-group__label">Projekt</span>
-          <div class="chip-list" id="dashboard-projekt-filter"></div>
+          <label class="filter-group__label" for="dashboard-projekt-filter">Projekt</label>
+          <select id="dashboard-projekt-filter" class="form-input"></select>
         </div>
       </div>
 
@@ -141,121 +145,34 @@
 
       <div class="card">
         <h2 class="card-title">Bereichsfarbe</h2>
-        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
-          Nur auf diesem Gerät gespeichert, wie in der Windows-App.
-        </p>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">Nur auf diesem Gerät gespeichert, wie in der Windows-App.</p>
         <div class="chip-list" id="einst-farbe-optionen"></div>
-        <div class="btn-row">
-          <button type="button" id="einst-farbe-speichern-btn" class="btn-primary">Farbe speichern</button>
-        </div>
+        <div class="btn-row"><button type="button" id="einst-farbe-speichern-btn" class="btn-primary">Farbe speichern</button></div>
       </div>
 
-      <div class="card">
-        <h2 class="card-title">Darstellung</h2>
-        <div class="chip-list" id="einst-darkmode-optionen"></div>
-      </div>
-
+      <div class="card"><h2 class="card-title">Darstellung</h2><div class="chip-list" id="einst-darkmode-optionen"></div></div>
       <div class="card">
         <h2 class="card-title">Aufgaben aufräumen</h2>
-        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
-          Entfernt alle als erledigt markierten Aufgaben endgültig aus der Liste.
-        </p>
-        <div class="btn-row">
-          <button type="button" id="einst-erledigte-loeschen-btn" class="btn-danger">Erledigte Aufgaben löschen</button>
-        </div>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">Entfernt alle als erledigt markierten Aufgaben endgültig aus der Liste.</p>
+        <div class="btn-row"><button type="button" id="einst-erledigte-loeschen-btn" class="btn-danger">Erledigte Aufgaben löschen</button></div>
       </div>
-
       <div class="card">
         <h2 class="card-title">Daten sichern</h2>
-        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
-          Exportiert bzw. importiert alle Aufgaben, Projekte und Bereiche als JSON-Datei –
-          kompatibel mit der aufgaben.json der Windows-App.
-        </p>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">Exportiert bzw. importiert alle Aufgaben, Projekte und Bereiche als JSON-Datei – kompatibel mit der aufgaben.json der Windows-App.</p>
         <div class="btn-row">
           <button type="button" id="einst-export-btn" class="btn-secondary">Exportieren</button>
-          <label class="btn-secondary" style="cursor: pointer;">
-            Importieren
-            <input type="file" id="einst-import-input" accept="application/json" hidden />
-          </label>
+          <label class="btn-secondary" style="cursor: pointer;">Importieren<input type="file" id="einst-import-input" accept="application/json" hidden /></label>
         </div>
       </div>
-
     </section>
-
   </main>
-
 </div>
-
 <div id="toast" class="toast" hidden></div>
 
-<!-- Popup: Aufgaben-Details (Bearbeiten) -->
-<div id="details-popup" class="popup-overlay" hidden>
-  <div class="popup">
-    <header class="popup__header">
-      <h2>Aufgabe</h2>
-      <button class="icon-btn" id="details-popup-close" aria-label="Schließen">✕</button>
-    </header>
-    <div class="popup__body" id="details-popup-body"></div>
-  </div>
-</div>
-
-<!-- Popup: Neue Aufgabe (ausgelöst über den +-Button auf dem Dashboard) -->
-<div id="neue-aufgabe-popup" class="popup-overlay" hidden>
-  <div class="popup">
-    <header class="popup__header">
-      <h2>Neue Aufgabe</h2>
-      <button class="icon-btn" id="neue-aufgabe-popup-close" aria-label="Schließen">✕</button>
-    </header>
-    <div class="popup__body">
-      <form id="neue-aufgabe-form" class="aufgabe-form">
-        <div class="form-field">
-          <label for="neu-titel">Titel</label>
-          <input type="text" id="neu-titel" class="form-input" required />
-        </div>
-        <div class="form-row">
-          <div class="form-field">
-            <label for="neu-bereich">Bereich</label>
-            <select id="neu-bereich" class="form-input"></select>
-          </div>
-          <div class="form-field">
-            <label for="neu-projekt">Projekt</label>
-            <select id="neu-projekt" class="form-input"></select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-field">
-            <label for="neu-prioritaet">Priorität</label>
-            <select id="neu-prioritaet" class="form-input">
-              <option value="P1Dringend">P1 – Dringend</option>
-              <option value="P2Wichtig">P2 – Wichtig</option>
-              <option value="P3Normal" selected>P3 – Normal</option>
-              <option value="P4Spaeter">P4 – Später</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="neu-faelligkeit">Fälligkeit (optional)</label>
-            <input type="date" id="neu-faelligkeit" class="form-input" />
-          </div>
-        </div>
-        <div class="form-field">
-          <label for="neu-notizen">Notizen (optional)</label>
-          <textarea id="neu-notizen" class="form-input" rows="2"></textarea>
-        </div>
-        <div class="popup-footer">
-          <button type="submit" class="btn-primary">Aufgabe hinzufügen</button>
-          <button type="button" id="neue-aufgabe-abbrechen-btn" class="btn-secondary">Abbrechen</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+<div id="details-popup" class="popup-overlay" hidden><div class="popup"><header class="popup__header"><h2>Aufgabe</h2><button class="icon-btn" id="details-popup-close" aria-label="Schließen">✕</button></header><div class="popup__body" id="details-popup-body"></div></div></div>
+<div id="neue-aufgabe-popup" class="popup-overlay" hidden><div class="popup"><header class="popup__header"><h2>Neue Aufgabe</h2><button class="icon-btn" id="neue-aufgabe-popup-close" aria-label="Schließen">✕</button></header><div class="popup__body"><form id="neue-aufgabe-form" class="aufgabe-form"><div class="form-field"><label for="neu-titel">Titel</label><input type="text" id="neu-titel" class="form-input" required /></div><div class="form-row"><div class="form-field"><label for="neu-bereich">Bereich</label><select id="neu-bereich" class="form-input"></select></div><div class="form-field"><label for="neu-projekt">Projekt</label><select id="neu-projekt" class="form-input"></select></div></div><div class="form-row"><div class="form-field"><label for="neu-prioritaet">Priorität</label><select id="neu-prioritaet" class="form-input"><option value="P1Dringend">P1 – Dringend</option><option value="P2Wichtig">P2 – Wichtig</option><option value="P3Normal" selected>P3 – Normal</option><option value="P4Spaeter">P4 – Später</option></select></div><div class="form-field"><label for="neu-faelligkeit">Fälligkeit (optional)</label><input type="date" id="neu-faelligkeit" class="form-input" /></div></div><div class="form-field"><label for="neu-notizen">Notizen (optional)</label><textarea id="neu-notizen" class="form-input" rows="2"></textarea></div><div class="popup-footer"><button type="submit" class="btn-primary">Aufgabe hinzufügen</button><button type="button" id="neue-aufgabe-abbrechen-btn" class="btn-secondary">Abbrechen</button></div></form></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-config.js"></script>
-<script src="js/store.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/aufgabenliste.js"></script>
-<script src="js/einstellungen.js"></script>
-<script src="js/app.js"></script>
+<script src="js/supabase-config.js"></script><script src="js/store.js"></script><script src="js/dashboard.js"></script><script src="js/aufgabenliste.js"></script><script src="js/einstellungen.js"></script><script src="js/app.js"></script>
 </body>
 </html>
