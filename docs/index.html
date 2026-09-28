@@ -257,15 +257,28 @@
             <input type="date" id="neu-faelligkeit" class="form-input" lang="de-CH" />
           </div>
         </div>
+
+        <!-- Zeiterfassungs-Felder -->
+        <div class="form-row">
+          <div class="form-field">
+            <label for="neu-sollzeit">Soll-Zeit (Std.)</label>
+            <input type="number" step="0.25" min="0" id="neu-sollzeit" class="form-input" placeholder="z. B. 2.5" />
+          </div>
+          <div class="form-field">
+            <label for="neu-istzeit">Ist-Zeit (Std.)</label>
+            <input type="number" step="0.25" min="0" id="neu-istzeit" class="form-input" placeholder="z. B. 1.0" />
+          </div>
+        </div>
+
         <div class="form-field">
           <label for="neu-notizen">Notizen (optional)</label>
           <textarea id="neu-notizen" class="form-input" rows="2"></textarea>
         </div>
         
-        <!-- Link Feld -->
+        <!-- Link Feld (für Web-URLs & Dateipfade) -->
         <div class="form-field">
-          <label for="neu-link">Link (optional)</label>
-          <input type="url" id="neu-link" class="form-input" placeholder="https://..." />
+          <label for="neu-link">Link / Pfad (optional)</label>
+          <input type="text" id="neu-link" class="form-input" placeholder="https://... oder file:///..." />
         </div>
 
         <!-- Checkliste Feld -->
