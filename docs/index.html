@@ -76,7 +76,7 @@
       <!-- KPI Übersichtskarten -->
       <div class="kpi-grid" id="dashboard-kpis"></div>
 
-      <!-- NEU: Fest platzierte Filter-Zeile direkt über der Liste -->
+      <!-- Fest platzierte Filter-Zeile direkt über der Liste -->
       <div class="filter-row" style="margin-top: 16px; margin-bottom: 12px;">
         <div class="filter-group">
           <label class="filter-group__label" for="dashboard-ansicht-filter">Filter</label>
@@ -214,7 +214,7 @@
   </div>
 </div>
 
-<!-- Popup: Neue Aufgabe (ausgelöst über den +-Button auf dem Dashboard) -->
+<!-- Popup: Neue Aufgabe -->
 <div id="neue-aufgabe-popup" class="popup-overlay" hidden>
   <div class="popup">
     <header class="popup__header">
@@ -256,6 +256,25 @@
           <label for="neu-notizen">Notizen (optional)</label>
           <textarea id="neu-notizen" class="form-input" rows="2"></textarea>
         </div>
+        
+        <!-- Link Feld -->
+        <div class="form-field">
+          <label for="neu-link">Link (optional)</label>
+          <input type="url" id="neu-link" class="form-input" placeholder="https://..." />
+        </div>
+
+        <!-- Checkliste Feld -->
+        <div class="form-field">
+          <label>Checkliste</label>
+          <div id="neu-checkliste-container" style="margin-bottom: 8px;">
+            <span style="font-size: 13px; color: var(--color-text-muted);">Noch keine Punkte.</span>
+          </div>
+          <div class="checkliste-add-row">
+            <input type="text" id="neu-checkliste-input" class="form-input" placeholder="Neuer Punkt..." />
+            <button type="button" id="neu-checkliste-add-btn" class="btn-secondary" style="padding: 0 14px;">+</button>
+          </div>
+        </div>
+
         <div class="popup-footer">
           <button type="submit" class="btn-primary">Aufgabe hinzufügen</button>
           <button type="button" id="neue-aufgabe-abbrechen-btn" class="btn-secondary">Abbrechen</button>
