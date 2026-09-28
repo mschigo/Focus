@@ -32,7 +32,7 @@ const Aufgabenliste = {
     this._linksEntwurf = [...(aufgabe.Links || [])];
 
     const headerTitle = document.querySelector("#details-popup .popup__header h2");
-    if (headerTitle) headerTitle.textContent = "Aufgabe bearbeiten";
+    if (headerTitle) headerTitle.textContent = "✏️ Aufgabe bearbeiten";
 
     this._renderPopupInhalt(aufgabe);
     const popup = document.getElementById("details-popup");
@@ -102,9 +102,9 @@ const Aufgabenliste = {
           <div class="form-field">
             <label for="edit-status">Status</label>
             <select id="edit-status" class="form-input">
-              <option value="Offen" ${aufgabe.Status === "Offen" ? "selected" : ""}>Offen</option>
-              <option value="InArbeit" ${aufgabe.Status === "InArbeit" ? "selected" : ""}>In Arbeit</option>
-              <option value="Erledigt" ${aufgabe.Status === "Erledigt" ? "selected" : ""}>Erledigt</option>
+              <option value="Offen" ${aufgabe.Status === "Offen" ? "selected" : ""}>○ Offen</option>
+              <option value="InArbeit" ${aufgabe.Status === "InArbeit" ? "selected" : ""}>⏱ In Arbeit</option>
+              <option value="Erledigt" ${aufgabe.Status === "Erledigt" ? "selected" : ""}>✓ Erledigt</option>
             </select>
           </div>
           <div class="form-field">
@@ -150,10 +150,10 @@ const Aufgabenliste = {
         </div>
 
         <div class="popup-footer" style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
-          <button type="submit" class="btn-primary">Speichern</button>
-          <button type="button" id="edit-duplizieren-btn" class="btn-secondary">Duplizieren</button>
-          <button type="button" id="edit-abbrechen-btn" class="btn-secondary">Abbrechen</button>
-          <button type="button" id="edit-loeschen-btn" class="btn-danger">Löschen</button>
+          <button type="submit" class="btn-primary">💾 Speichern</button>
+          <button type="button" id="edit-duplizieren-btn" class="btn-secondary">📄 Duplizieren</button>
+          <button type="button" id="edit-abbrechen-btn" class="btn-secondary">✕ Abbrechen</button>
+          <button type="button" id="edit-loeschen-btn" class="btn-danger">🗑️ Löschen</button>
         </div>
       </form>
     `;
@@ -286,11 +286,18 @@ const Aufgabenliste = {
     if (!container) return;
     container.innerHTML = "";
 
+    const prioritaetIcons = {
+      [Prioritaet.P1Dringend]: "🔴",
+      [Prioritaet.P2Wichtig]: "🟠",
+      [Prioritaet.P3Normal]: "⚪",
+      [Prioritaet.P4Spaeter]: "⚫",
+    };
+
     for (const prio of PRIORITAET_REIHENFOLGE) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chip" + (prio === aktuellePrioritaet ? " is-selected" : "");
-      btn.textContent = Anzeige.prioritaetText(prio);
+      btn.textContent = `${prioritaetIcons[prio] || ""} ${Anzeige.prioritaetText(prio)}`;
       btn.dataset.prioritaet = prio;
       btn.addEventListener("click", () => {
         container.querySelectorAll(".chip").forEach((c) => c.classList.remove("is-selected"));

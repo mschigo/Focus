@@ -294,8 +294,8 @@ const App = {
     modusToggle.addEventListener("click", (e) => {
       e.preventDefault();
       modus = modus === "signin" ? "signup" : "signin";
-      submitBtn.textContent = modus === "signin" ? "Anmelden" : "Konto erstellen";
-      modusToggle.textContent = modus === "signin" ? "Neu hier? Konto erstellen" : "Bereits ein Konto? Anmelden";
+      submitBtn.textContent = modus === "signin" ? "🔐 Anmelden" : "🆕 Konto erstellen";
+      modusToggle.textContent = modus === "signin" ? "👤 Neu hier? Konto erstellen" : "🔐 Bereits ein Konto? Anmelden";
       if (fehlerEl) fehlerEl.textContent = "";
     });
 

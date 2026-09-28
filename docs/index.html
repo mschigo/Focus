@@ -24,20 +24,20 @@
 
     <form id="login-form">
       <div class="form-field">
-        <label for="login-email">E-Mail</label>
+        <label for="login-email">✉️ E-Mail</label>
         <input type="email" id="login-email" class="form-input" required autocomplete="email" />
       </div>
       <div class="form-field">
-        <label for="login-passwort">Passwort</label>
-        <input type="password" id="login-passwort" class="form-input" required autocomplete="current-password" minlength="6" /> 
+        <label for="login-passwort">🔒 Passwort</label>
+        <input type="password" id="login-passwort" class="form-input" required autocomplete="current-password" minlength="6" />
       </div>
 
       <p id="login-error" class="login-error"></p>
 
-      <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%;">Anmelden</button>
+      <button type="submit" id="login-submit-btn" class="btn-primary" style="width: 100%;">🔐 Anmelden</button>
     </form>
 
-    <button type="button" id="login-modus-toggle" class="link-btn">Neu hier? Konto erstellen</button>
+    <button type="button" id="login-modus-toggle" class="link-btn">👤 Neu hier? Konto erstellen</button>
   </div>
 </div>
 
@@ -51,10 +51,10 @@
       <button id="logout-btn" class="icon-btn" style="margin-left: auto;" title="Abmelden">⏻</button>
     </div>
     <nav class="tabbar" id="tabbar">
-      <button class="tab-btn is-active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn is-active" data-tab="dashboard">🏠 Dashboard</button>
       <a href="zeitauswertung.html" class="tab-btn" style="text-decoration: none;">📊 Auswertung</a>
       <a href="gantt.html" class="tab-btn" style="text-decoration: none;">📅 Gantt</a>
-      <button class="tab-btn" data-tab="einstellungen">Einstellungen</button>
+      <button class="tab-btn" data-tab="einstellungen">⚙️ Einstellungen</button>
     </nav>
   </header>
 
@@ -83,14 +83,14 @@
         <div class="filter-group">
           <label class="filter-group__label" for="dashboard-ansicht-filter">Filter</label>
           <select id="dashboard-ansicht-filter" class="form-input" style="min-width: 180px;">
-            <option value="Alle">Alle Aufgaben</option>
-            <option value="P1">Top P1</option>
-            <option value="P2">Top P2</option>
-            <option value="P3">Top P3</option>
-            <option value="Ueberfaellig">Überfällig</option>
-            <option value="Heute">Heute fällig</option>
-            <option value="DieseWoche">Diese Woche</option>
-            <option value="Erledigt">Erledigt</option>
+            <option value="Alle">📋 Alle Aufgaben</option>
+            <option value="P1">🔴 Top P1</option>
+            <option value="P2">🟠 Top P2</option>
+            <option value="P3">⚪ Top P3</option>
+            <option value="Ueberfaellig">⏰ Überfällig</option>
+            <option value="Heute">📆 Heute fällig</option>
+            <option value="DieseWoche">🗓️ Diese Woche</option>
+            <option value="Erledigt">✅ Erledigt</option>
           </select>
         </div>
         <div class="filter-group filter-group--grow">
@@ -110,7 +110,7 @@
     <section id="view-einstellungen" class="view">
 
       <div class="card">
-        <h2 class="card-title">Bereiche</h2>
+        <h2 class="card-title">🗂️ Bereiche</h2>
         <div class="form-field">
           <label for="einst-bereich-select">Bereich</label>
           <select id="einst-bereich-select" class="form-input"></select>
@@ -120,8 +120,8 @@
           <input type="text" id="einst-bereich-umbenennen" class="form-input" />
         </div>
         <div class="btn-row">
-          <button type="button" id="einst-bereich-umbenennen-btn" class="btn-secondary">Umbenennen</button>
-          <button type="button" id="einst-bereich-loeschen-btn" class="btn-danger">Bereich löschen</button>
+          <button type="button" id="einst-bereich-umbenennen-btn" class="btn-secondary">✏️ Umbenennen</button>
+          <button type="button" id="einst-bereich-loeschen-btn" class="btn-danger">🗑️ Bereich löschen</button>
         </div>
 
         <div class="form-row" style="margin-top: 16px;">
@@ -131,12 +131,12 @@
           </div>
         </div>
         <div class="btn-row">
-          <button type="button" id="einst-bereich-hinzufuegen-btn" class="btn-primary">Hinzufügen</button>
+          <button type="button" id="einst-bereich-hinzufuegen-btn" class="btn-primary">➕ Hinzufügen</button>
         </div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">Projekte (im gewählten Bereich)</h2>
+        <h2 class="card-title">📋 Projekte (im gewählten Bereich)</h2>
         <div class="form-field">
           <label for="einst-projekt-select">Projekt</label>
           <select id="einst-projekt-select" class="form-input"></select>
@@ -146,8 +146,8 @@
           <input type="text" id="einst-projekt-umbenennen" class="form-input" />
         </div>
         <div class="btn-row">
-          <button type="button" id="einst-projekt-umbenennen-btn" class="btn-secondary">Umbenennen</button>
-          <button type="button" id="einst-projekt-loeschen-btn" class="btn-danger">Projekt löschen</button>
+          <button type="button" id="einst-projekt-umbenennen-btn" class="btn-secondary">✏️ Umbenennen</button>
+          <button type="button" id="einst-projekt-loeschen-btn" class="btn-danger">🗑️ Projekt löschen</button>
         </div>
 
         <div class="form-row" style="margin-top: 16px;">
@@ -157,46 +157,46 @@
           </div>
         </div>
         <div class="btn-row">
-          <button type="button" id="einst-projekt-hinzufuegen-btn" class="btn-primary">Hinzufügen</button>
+          <button type="button" id="einst-projekt-hinzufuegen-btn" class="btn-primary">➕ Hinzufügen</button>
         </div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">Bereichsfarbe</h2>
+        <h2 class="card-title">🎨 Bereichsfarbe</h2>
         <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
           Wird mit deinem Konto synchronisiert und ist auf allen Geräten sichtbar.
         </p>
         <div class="chip-list" id="einst-farbe-optionen"></div>
         <div class="btn-row">
-          <button type="button" id="einst-farbe-speichern-btn" class="btn-primary">Farbe speichern</button>
+          <button type="button" id="einst-farbe-speichern-btn" class="btn-primary">💾 Farbe speichern</button>
         </div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">Darstellung</h2>
+        <h2 class="card-title">🌓 Darstellung</h2>
         <div class="chip-list" id="einst-darkmode-optionen"></div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">Aufgaben aufräumen</h2>
+        <h2 class="card-title">🧹 Aufgaben aufräumen</h2>
         <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
           Entfernt alle als erledigt markierten Aufgaben endgültig aus der Liste.
         </p>
         <div class="btn-row">
-          <button type="button" id="einst-erledigte-loeschen-btn" class="btn-danger">Erledigte Aufgaben löschen</button>
+          <button type="button" id="einst-erledigte-loeschen-btn" class="btn-danger">🗑️ Erledigte Aufgaben löschen</button>
         </div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">Daten sichern</h2>
+        <h2 class="card-title">💾 Daten sichern</h2>
         <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
           Exportiert bzw. importiert alle Aufgaben, Projekte und Bereiche als JSON-Datei –
           kompatibel mit der aufgaben.json der Windows-App.
         </p>
         <div class="btn-row">
-          <button type="button" id="einst-export-btn" class="btn-secondary">Exportieren</button>
+          <button type="button" id="einst-export-btn" class="btn-secondary">⬇️ Exportieren</button>
           <label class="btn-secondary" style="cursor: pointer;">
-            Importieren
+            ⬆️ Importieren
             <input type="file" id="einst-import-input" accept="application/json" hidden />
           </label>
         </div>
@@ -214,7 +214,7 @@
 <div id="details-popup" class="popup-overlay" hidden>
   <div class="popup">
     <header class="popup__header">
-      <h2>Aufgabe</h2>
+      <h2>📝 Aufgabe</h2>
       <button class="icon-btn" id="details-popup-close" aria-label="Schließen">✕</button>
     </header>
     <div class="popup__body" id="details-popup-body"></div>
@@ -225,7 +225,7 @@
 <div id="neue-aufgabe-popup" class="popup-overlay" hidden>
   <div class="popup">
     <header class="popup__header">
-      <h2>Neue Aufgabe</h2>
+      <h2>➕ Neue Aufgabe</h2>
       <button class="icon-btn" id="neue-aufgabe-popup-close" aria-label="Schließen">✕</button>
     </header>
     <div class="popup__body">
@@ -248,10 +248,10 @@
           <div class="form-field">
             <label for="neu-prioritaet">Priorität</label>
             <select id="neu-prioritaet" class="form-input">
-              <option value="P1Dringend">P1 – Dringend</option>
-              <option value="P2Wichtig">P2 – Wichtig</option>
-              <option value="P3Normal" selected>P3 – Normal</option>
-              <option value="P4Spaeter">P4 – Später</option>
+              <option value="P1Dringend">🔴 P1 – Dringend</option>
+              <option value="P2Wichtig">🟠 P2 – Wichtig</option>
+              <option value="P3Normal" selected>⚪ P3 – Normal</option>
+              <option value="P4Spaeter">⚫ P4 – Später</option>
             </select>
           </div>
           <div class="form-field">
@@ -300,8 +300,8 @@
         </div>
 
         <div class="popup-footer">
-          <button type="submit" class="btn-primary">Aufgabe hinzufügen</button>
-          <button type="button" id="neue-aufgabe-abbrechen-btn" class="btn-secondary">Abbrechen</button>
+          <button type="submit" class="btn-primary">➕ Aufgabe hinzufügen</button>
+          <button type="button" id="neue-aufgabe-abbrechen-btn" class="btn-secondary">✕ Abbrechen</button>
         </div>
       </form>
     </div>

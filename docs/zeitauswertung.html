@@ -18,7 +18,7 @@
     <nav class="tabbar" id="tabbar" style="margin-left: auto;">
       <a href="gantt.html" class="tab-btn" style="text-decoration: none;">📅 Gantt</a>
       <a href="index.html" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;">
-        ← Zurück zum Dashboard
+        🏠 Zurück zum Dashboard
       </a>
     </nav>
   </header>
@@ -44,11 +44,11 @@
       <div class="filter-group">
         <label class="filter-group__label" for="filter-zeitraum-preset">Zeitraum</label>
         <select id="filter-zeitraum-preset" class="form-input" style="min-width: 150px;">
-          <option value="Alle" selected>Gesamter Zeitraum</option>
-          <option value="DieseWoche">Diese Woche</option>
-          <option value="DieserMonat">Dieser Monat</option>
-          <option value="LetzterMonat">Letzter Monat</option>
-          <option value="DiesesJahr">Dieses Jahr</option>
+          <option value="Alle" selected>♾️ Gesamter Zeitraum</option>
+          <option value="DieseWoche">🗓️ Diese Woche</option>
+          <option value="DieserMonat">📆 Dieser Monat</option>
+          <option value="LetzterMonat">⏮️ Letzter Monat</option>
+          <option value="DiesesJahr">📅 Dieses Jahr</option>
 
         </select>
       </div>
@@ -68,32 +68,32 @@
     <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
       <div class="kpi-card">
         <div class="kpi-card__value" id="kpi-soll">0.0h</div>
-        <div class="kpi-card__label">Gesamt Soll-Zeit</div>
+        <div class="kpi-card__label">🎯 Gesamt Soll-Zeit</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-card__value" id="kpi-ist">0.0h</div>
-        <div class="kpi-card__label">Gesamt Ist-Zeit</div>
+        <div class="kpi-card__label">⏱ Gesamt Ist-Zeit</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-card__value" id="kpi-diff">0.0h</div>
-        <div class="kpi-card__label">Differenz (Ist - Soll)</div>
+        <div class="kpi-card__label">⚖️ Differenz (Ist - Soll)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-card__value" id="kpi-anzahl">0</div>
-        <div class="kpi-card__label">Ausgewertete Aufgaben</div>
+        <div class="kpi-card__label">📋 Ausgewertete Aufgaben</div>
       </div>
     </div>
 
     <!-- Diagramme -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 24px;">
       <div class="card">
-        <h2 class="card-title">Soll vs. Ist nach Projekt</h2>
+        <h2 class="card-title">📊 Soll vs. Ist nach Projekt</h2>
         <div style="position: relative; height: 300px;">
           <canvas id="chart-projekte"></canvas>
         </div>
       </div>
       <div class="card">
-        <h2 class="card-title">Aufwandsverteilung (Ist-Zeit)</h2>
+        <h2 class="card-title">🥧 Aufwandsverteilung (Ist-Zeit)</h2>
         <div style="position: relative; height: 300px;">
           <canvas id="chart-verteilung"></canvas>
         </div>
@@ -102,7 +102,7 @@
 
     <!-- Top Abweichungen -->
     <div class="card">
-      <h2 class="card-title">Aufgabenübersicht & Abweichungen</h2>
+      <h2 class="card-title">📋 Aufgabenübersicht & Abweichungen</h2>
       <div id="tabelle-abweichungen"></div>
     </div>
 

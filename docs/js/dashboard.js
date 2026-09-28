@@ -189,12 +189,12 @@ const Dashboard = {
   _renderKpis(kpis) {
     const container = document.getElementById("dashboard-kpis");
     const karten = [
-      { label: "Offen gesamt", value: kpis.offeneGesamt, cls: "" },
-      { label: "P1 Dringend", value: kpis.offenP1, cls: "kpi-card--p1" },
-      { label: "P2 Wichtig", value: kpis.offenP2, cls: "kpi-card--p2" },
-      { label: "Heute fällig", value: kpis.heuteFaellig, cls: "" },
-      { label: "Diese Woche", value: kpis.dieseWocheFaellig, cls: "" },
-      { label: "Überfällig", value: kpis.ueberfaellig, cls: kpis.ueberfaellig > 0 ? "kpi-card--warn" : "" },
+      { label: "📌 Offen gesamt", value: kpis.offeneGesamt, cls: "" },
+      { label: "🔴 P1 Dringend", value: kpis.offenP1, cls: "kpi-card--p1" },
+      { label: "🟠 P2 Wichtig", value: kpis.offenP2, cls: "kpi-card--p2" },
+      { label: "📆 Heute fällig", value: kpis.heuteFaellig, cls: "" },
+      { label: "🗓️ Diese Woche", value: kpis.dieseWocheFaellig, cls: "" },
+      { label: "⏰ Überfällig", value: kpis.ueberfaellig, cls: kpis.ueberfaellig > 0 ? "kpi-card--warn" : "" },
     ];
 
     container.innerHTML = karten
