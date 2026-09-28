@@ -70,15 +70,23 @@
           <span class="filter-group__label">Projekt</span>
           <div class="chip-list" id="dashboard-projekt-filter"></div>
         </div>
+        <div class="filter-group">
+          <label class="filter-group__label" for="dashboard-ansicht-filter">Filter</label>
+          <select id="dashboard-ansicht-filter" class="form-input">
+            <option value="Alle">Alle Aufgaben</option>
+            <option value="P1">Top P1</option>
+            <option value="P2">Top P2</option>
+            <option value="P3">Top P3</option>
+            <option value="Ueberfaellig">Überfällig</option>
+            <option value="Heute">Heute fällig</option>
+            <option value="DieseWoche">Diese Woche</option>
+          </select>
+        </div>
       </div>
 
       <div class="kpi-grid" id="dashboard-kpis"></div>
 
-      <div class="sektionen-toolbar">
-        <button type="button" id="dashboard-toggle-alle-btn" class="btn-secondary">Alle aufklappen</button>
-      </div>
-
-      <div class="sektionen" id="dashboard-sektionen"></div>
+      <div class="sektionen" id="dashboard-sektionen" style="margin-top: 16px;"></div>
 
       <button type="button" id="dashboard-fab-neue-aufgabe" class="fab" aria-label="Neue Aufgabe" title="Neue Aufgabe">+</button>
 
