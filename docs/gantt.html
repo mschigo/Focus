@@ -99,7 +99,6 @@
 <script>
 let ganttChart = null;
 
-// Hilfsfunktion für heutiges Datum im Format YYYY-MM-DD
 function heuteIso() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -134,7 +133,6 @@ async function initGantt() {
     }
   });
 
-  // Vollbild-Steuerung
   document.getElementById("btn-fullscreen").addEventListener("click", () => {
     const card = document.getElementById("gantt-card");
     if (!document.fullscreenElement) {
@@ -208,7 +206,7 @@ function formatiereDatumDE(dateStr) {
   return dateStr;
 }
 
-// Inline-Plugin zum Zeichnen der roten Linie für den heutigen Tag
+// Inline-Plugin für die heutige Trennlinie
 const heuteLiniePlugin = {
   id: 'heuteLinie',
   afterDraw(chart) {
@@ -219,15 +217,14 @@ const heuteLiniePlugin = {
     const heuteStr = heuteIso();
     const xPixel = xAxi.getPixelForValue(new Date(heuteStr).getTime());
 
-    // Prüfen, ob der heutige Tag im aktuell sichtbaren Bereich liegt
     if (xPixel >= xAxi.left && xPixel <= xAxi.right) {
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(xPixel, yAxis.top);
       ctx.lineTo(xPixel, yAxis.bottom);
       ctx.lineWidth = 2;
-      ctx.strokeStyle = '#ff4d4d'; // Feines Rot
-      ctx.setLineDash([4, 4]); // Optional: gestrichelte Linie (oder Zeile löschen für durchgezogen)
+      ctx.strokeStyle = '#ff4d4d';
+      ctx.setLineDash([4, 4]);
       ctx.stroke();
       ctx.restore();
     }
@@ -255,14 +252,21 @@ function rendereGantt() {
   let minDate = null;
   let maxDate = null;
 
+  // Fallback-Farbpalette, falls keine Bereichsfarbe definiert ist
+  const fallbackFarben = [
+    "rgba(54, 162, 235, 0.7)",  // Blau
+    "rgba(75, 192, 192, 0.7)",  // Türkis
+    "rgba(153, 102, 255, 0.7)", // Lila
+    "rgba(255, 159, 64, 0.7)"   // Orange
+  ];
+  let fallbackIndex = 0;
+
   aufgabenMitDatum.forEach(a => {
     const titel = a.Titel;
     const faellig = a.Faelligkeit;
     
-    // 1. Priorität: Explizites Startdatum
     let start = a.Startdatum && datumRegex.test(a.Startdatum) ? a.Startdatum : null;
 
-    // 2. Fallback: Erstellungsdatum
     if (!start && a.ErstelltAm && datumRegex.test(a.ErstelltAm.substring(0, 10))) {
       const ers = a.ErstelltAm.substring(0, 10);
       if (ers <= faellig) {
@@ -270,7 +274,6 @@ function rendereGantt() {
       }
     }
 
-    // 3. Fallback: 1 Tag vor Fälligkeit
     if (!start || start >= faellig) {
       const d = new Date(faellig);
       d.setDate(d.getDate() - 1);
@@ -284,13 +287,22 @@ function rendereGantt() {
     if (!minDate || start < minDate) minDate = start;
     if (!maxDate || faellig > maxDate) maxDate = faellig;
 
-    if (a.Status === "Erledigt") {
-      backgroundColors.push("rgba(75, 192, 192, 0.7)");
-    } else if (a.Prioritaet === "P1Dringend") {
-      backgroundColors.push("rgba(255, 99, 132, 0.8)");
-    } else {
-      backgroundColors.push("rgba(54, 162, 235, 0.7)");
+    // Farbzuweisung: Prüfen, ob eine Bereichsfarbe in den LokaleEinstellungen existiert
+    let farbe = null;
+    if (typeof LokaleEinstellungen !== "undefined" && a.Bereich) {
+      const bereichsFarbeHex = LokaleEinstellungen.getBereichFarbe(a.Bereich);
+      if (bereichsFarbeHex) {
+        farbe = bereichsFarbeHex;
+      }
     }
+
+    if (!farbe) {
+      // Wenn keine benutzerdefinierte Farbe da ist, Fallback nutzen
+      farbe = fallbackFarben[fallbackIndex % fallbackFarben.length];
+      fallbackIndex++;
+    }
+
+    backgroundColors.push(farbe);
   });
 
   ganttChart = new Chart(ctx, {
