@@ -48,7 +48,7 @@
     <div class="card" style="margin-bottom: 24px;">
       <h2 class="card-title">Projekt-Timeline (Fälligkeiten & Zeiträume)</h2>
       <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -8px; margin-bottom: 12px;">
-        💡 Hinweis: Nutze das <strong>Mausrad zum Zoomen</strong> und die <strong>gedrückte Maustaste zum Verschieben</strong> des Zeitstrahls.
+        💡 Hinweis: Ziehe mit <strong>gedrückter Maustaste</strong>, um die X-Achse zu verschieben. Nutze das <strong>Mausrad zum Zoomen</strong>.
       </p>
       <div style="position: relative; height: 450px; width: 100%;">
         <canvas id="gantt-chart"></canvas>
@@ -136,13 +136,21 @@ function holeGefilterteAufgaben() {
   return aufgaben;
 }
 
+function formatiereDatumDE(dateStr) {
+  if (!dateStr) return "-";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+  }
+  return dateStr;
+}
+
 function rendereGantt() {
   const aufgaben = holeGefilterteAufgaben();
   const ctx = document.getElementById("gantt-chart").getContext("2d");
 
   if (ganttChart) ganttChart.destroy();
 
-  // Strikte Validierung: Nur Datumsformate im Schema YYYY-MM-DD erlauben
   const datumRegex = /^\d{4}-\d{2}-\d{2}$/;
   const aufgabenMitDatum = aufgaben.filter(a => a.Faelligkeit && datumRegex.test(a.Faelligkeit));
 
@@ -153,15 +161,15 @@ function rendereGantt() {
   const labels = [];
   const dataPoints = [];
   const backgroundColors = [];
+  const originalData = [];
 
   let minDate = null;
   let maxDate = null;
 
   aufgabenMitDatum.forEach(a => {
     const titel = a.Titel;
-    const faellig = a.Faelligkeit; // YYYY-MM-DD
+    const faellig = a.Faelligkeit;
     
-    // Startdatum bestimmen (ErstelltAm nur nutzen, wenn im korrekten Format YYYY-MM-DD)
     let start = faellig;
     if (a.ErstelltAm && datumRegex.test(a.ErstelltAm.substring(0, 10))) {
       const ers = a.ErstelltAm.substring(0, 10);
@@ -170,7 +178,6 @@ function rendereGantt() {
       }
     }
 
-    // Wenn Start und Fälligkeit identisch sind, setzen wir für die Sichtbarkeit einen Puffer von 2 Tagen nach links
     if (start === faellig) {
       const d = new Date(faellig);
       d.setDate(d.getDate() - 2);
@@ -179,12 +186,11 @@ function rendereGantt() {
 
     labels.push(titel);
     dataPoints.push([start, faellig]);
+    originalData.push({ start, faellig, titel, projekt: a.ProjektName });
 
-    // Korrekte Min/Max Grenzen der gefilterten Daten ermitteln
     if (!minDate || start < minDate) minDate = start;
     if (!maxDate || faellig > maxDate) maxDate = faellig;
 
-    // Farben nach Status / Priorität
     if (a.Status === "Erledigt") {
       backgroundColors.push("rgba(75, 192, 192, 0.7)");
     } else if (a.Prioritaet === "P1Dringend") {
@@ -227,10 +233,25 @@ function rendereGantt() {
       },
       plugins: {
         legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const idx = context.dataIndex;
+              const item = originalData[idx];
+              if (!item) return "";
+              return [
+                `Projekt: ${item.projekt || "-"}`,
+                `Start: ${formatiereDatumDE(item.start)}`,
+                `Fällig: ${formatiereDatumDE(item.faellig)}`
+              ];
+            }
+          }
+        },
         zoom: {
           pan: {
             enabled: true,
-            mode: "x"
+            mode: "x",
+            modifierKey: null
           },
           zoom: {
             wheel: { enabled: true },
