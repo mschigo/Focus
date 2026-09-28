@@ -36,6 +36,26 @@ const Aufgabenliste = {
     if (popup) popup.hidden = false;
   },
 
+  _berechneNeueZeit(altWert, eingabe) {
+    const str = eingabe.trim().replace(",", ".");
+    if (!str) return altWert;
+
+    const op = str.charAt(0);
+    const val = parseFloat(str.substring(1));
+
+    if (["+", "-", "*", "/"].includes(op) && !isNaN(val)) {
+      let ergebnis = altWert;
+      if (op === "+") ergebnis += val;
+      if (op === "-") ergebnis -= val;
+      if (op === "*") ergebnis *= val;
+      if (op === "/") ergebnis = val !== 0 ? ergebnis / val : ergebnis;
+      return Math.max(0, Math.round(ergebnis * 100) / 100);
+    }
+
+    const direktWert = parseFloat(str);
+    return isNaN(direktWert) ? altWert : Math.max(0, direktWert);
+  },
+
   _renderPopupInhalt(aufgabe) {
     const body = document.getElementById("details-popup-body");
     if (!body) return;
@@ -84,15 +104,15 @@ const Aufgabenliste = {
           </div>
         </div>
 
-        <!-- Zeiterfassungs-Felder -->
+        <!-- Zeiterfassungs-Felder (type="text", damit Rechenzeichen eingegeben werden können) -->
         <div class="form-row">
           <div class="form-field">
             <label for="edit-sollzeit">Soll-Zeit (Std.)</label>
-            <input type="number" step="0.25" min="0" id="edit-sollzeit" class="form-input" placeholder="z. B. 2.5" value="${aufgabe.SollZeit || ""}" />
+            <input type="text" id="edit-sollzeit" class="form-input" placeholder="z. B. 2.5 oder +1" value="${aufgabe.SollZeit || ""}" />
           </div>
           <div class="form-field">
             <label for="edit-istzeit">Ist-Zeit (Std.)</label>
-            <input type="number" step="0.25" min="0" id="edit-istzeit" class="form-input" placeholder="z. B. 1.0" value="${aufgabe.IstZeit || ""}" />
+            <input type="text" id="edit-istzeit" class="form-input" placeholder="z. B. 1.0 oder +0.5" value="${aufgabe.IstZeit || ""}" />
           </div>
         </div>
 
@@ -140,6 +160,26 @@ const Aufgabenliste = {
 
     bereichSelect.addEventListener("change", ladeProjekte);
     ladeProjekte();
+
+    // Automatische Rechnungs-Auswertung für Ist-Zeit und Soll-Zeit beim Verlassen (blur)
+    let aktuellerIstWert = parseFloat(aufgabe.IstZeit) || 0;
+    let aktuellerSollWert = parseFloat(aufgabe.SollZeit) || 0;
+
+    const istInput = document.getElementById("edit-istzeit");
+    if (istInput) {
+      istInput.addEventListener("blur", () => {
+        aktuellerIstWert = this._berechneNeueZeit(aktuellerIstWert, istInput.value);
+        istInput.value = aktuellerIstWert > 0 ? aktuellerIstWert : "";
+      });
+    }
+
+    const sollInput = document.getElementById("edit-sollzeit");
+    if (sollInput) {
+      sollInput.addEventListener("blur", () => {
+        aktuellerSollWert = this._berechneNeueZeit(aktuellerSollWert, sollInput.value);
+        sollInput.value = aktuellerSollWert > 0 ? aktuellerSollWert : "";
+      });
+    }
 
     // Automatische Synchronisation der Datumsfelder im Bearbeiten-Popup
     const editStartInput = document.getElementById("edit-startdatum");
@@ -202,7 +242,18 @@ const Aufgabenliste = {
     // Formular Absenden (Speichern)
     document.getElementById("edit-aufgabe-form")?.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._speichern(aufgabe.Id);
+      
+      // Vor dem Speichern sicherstellen, dass offene Berechnungen verarbeitet sind
+      if (istInput) {
+        aktuellerIstWert = this._berechneNeueZeit(aktuellerIstWert, istInput.value);
+        istInput.value = aktuellerIstWert > 0 ? aktuellerIstWert : "";
+      }
+      if (sollInput) {
+        aktuellerSollWert = this._berechneNeueZeit(aktuellerSollWert, sollInput.value);
+        sollInput.value = aktuellerSollWert > 0 ? aktuellerSollWert : "";
+      }
+
+      this._speichern(aufgabe.Id, aktuellerSollWert, aktuellerIstWert);
     });
   },
 
@@ -287,7 +338,7 @@ const Aufgabenliste = {
     if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Aufgabe dupliziert.");
   },
 
-  _speichern(aufgabeId) {
+  _speichern(aufgabeId, sollZeit, istZeit) {
     const titel = document.getElementById("edit-titel")?.value.trim();
     if (!titel) {
       if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Titel ist erforderlich.", true);
@@ -317,8 +368,8 @@ const Aufgabenliste = {
         Status: document.getElementById("edit-status")?.value || AufgabenStatus.Offen,
         Startdatum: finalStart,
         Faelligkeit: finalFaellig,
-        SollZeit: parseFloat(document.getElementById("edit-sollzeit")?.value) || 0,
-        IstZeit: parseFloat(document.getElementById("edit-istzeit")?.value) || 0,
+        SollZeit: parseFloat(sollZeit) || 0,
+        IstZeit: parseFloat(istZeit) || 0,
         Notizen: document.getElementById("edit-notizen")?.value.trim() || "",
         Link: document.getElementById("edit-link")?.value.trim() || "",
         Checkliste: this._checklisteEntwurf,
