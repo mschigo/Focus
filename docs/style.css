@@ -306,12 +306,12 @@ main {
    Zeilenhintergrund, damit die (helle) Farbe im Dark Mode nicht störend wirkt. */
 .bereich-farbe-dot {
   display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
-  margin-right: 5px;
+  width: 12px;                  /* Bisher meist 6px bis 8px -> auf 12px vergrössert */
+  height: 12px;                 /* Bisher meist 6px bis 8px -> auf 12px vergrössert */
+  border-radius: 3px;           /* 3px macht ein quadratisches Feld mit leicht abgerundeten Ecken */
+  margin-right: 6px;
   vertical-align: middle;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .aufgabe-row__main {
