@@ -177,7 +177,9 @@ const Store = {
         IstAktiv: istAktiv,
         IstAbgeschwaecht: a.Status === AufgabenStatus.Erledigt,
         IstUeberfaellig: istUeberfaellig,
-        Checkliste: a.Checkliste || []
+        Checkliste: a.Checkliste || [],
+        SollZeit: parseFloat(a.SollZeit) || 0,
+        IstZeit: parseFloat(a.IstZeit) || 0,
       };
     });
   },
@@ -227,6 +229,8 @@ const Store = {
         Notizen: aufgabe.Notizen || "",
         Link: aufgabe.Link || "",
         Checkliste: aufgabe.Checkliste || [],
+        SollZeit: parseFloat(aufgabe.SollZeit) || 0,
+        IstZeit: parseFloat(aufgabe.IstZeit) || 0,
         ErstelltAm: now,
         GeaendertAm: now,
       };
@@ -243,6 +247,8 @@ const Store = {
         Notizen: aufgabe.Notizen || "",
         Link: aufgabe.Link || "",
         Checkliste: aufgabe.Checkliste || [],
+        SollZeit: parseFloat(aufgabe.SollZeit) || 0,
+        IstZeit: parseFloat(aufgabe.IstZeit) || 0,
         GeaendertAm: now,
       };
     }
@@ -260,7 +266,10 @@ const Store = {
     this.speichern();
   },
 
-  /* WICHTIG: Methoden zum Löschen */
+  setAufgabeStatus(id, status) {
+    this.setAufgabenStatus(id, status);
+  },
+
   endgueltigLoeschen(id) {
     this._pruefeGeladen();
     this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Id !== id);
