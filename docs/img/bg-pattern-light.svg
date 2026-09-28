@@ -56,5 +56,13 @@
     <text x="492" y="150" font-size="34" font-style="italic">&#8706;</text>
     <text x="206" y="230" font-size="32" font-style="italic">&#955;</text>
     <text x="325" y="580" font-size="15" font-style="italic">a&#178; + b&#178; = c&#178;</text>
+
+    <!-- Regelungstechnik: Differentialgleichung & Übertragungsfunktion -->
+    <text x="30" y="260" font-size="13">x&#8243; + 2&#950;&#969;x&#8242; + &#969;&#178;x = 0</text>
+    <text x="318" y="335" font-size="13">G(s) = &#969;&#178; / (s&#178;+2&#950;&#969;s+&#969;&#178;)</text>
+
+    <!-- Robotik: Park-Transformation (dq0) -->
+    <text x="340" y="182" font-size="12">d = i&#945; cos&#952; + i&#946; sin&#952;</text>
+    <text x="340" y="202" font-size="12">q = -i&#945; sin&#952; + i&#946; cos&#952;</text>
   </g>
 </svg>
