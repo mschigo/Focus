@@ -38,6 +38,14 @@
     .card:fullscreen .gantt-container {
       height: 85vh !important;
     }
+
+    /* Auf dem Handy passt eine kleinere, feste Höhe deutlich besser als
+       450px, die inline gesetzt sind – daher hier mit !important überschrieben. */
+    @media (max-width: 600px) {
+      .gantt-container {
+        height: 300px !important;
+      }
+    }
   </style>
 </head>
 <body>
