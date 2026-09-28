@@ -1,32 +1,26 @@
 /**
  * Focus Web – Dashboard.
- * Entspricht ViewModels/DashboardViewModel.cs: KPIs, nach Priorität/Fälligkeit
- * gruppierte Top-Listen, Bereichs-/Projektfilter, ein-/ausklappbare Sektionen.
+ * Flache Aufgabenliste mit Bereichs-, Projekt- und Dropdown-Filterung.
  */
-
-const ALLE_SEKTION_KEYS = ["Ueberfaellig", "P1", "P2", "P3", "Heute", "DieseWoche", "Erledigt"];
 
 const Dashboard = {
   ausgewaehlterBereich: "Alle",
   ausgewaehltesProjekt: "Alle",
-  eingeklappt: new Set(["Erledigt"]), // Erledigt ist standardmäßig eingeklappt, wie in der App.
+  ausgewaehlterAnsichtsFilter: "Alle",
 
   init() {
     document.addEventListener("focus:datenGeaendert", () => this.render());
-    document.getElementById("dashboard-toggle-alle-btn").addEventListener("click", () => this.toggleAlleSektionen());
+
+    const ansichtSelect = document.getElementById("dashboard-ansicht-filter");
+    if (ansichtSelect) {
+      ansichtSelect.addEventListener("change", (e) => this.setAnsichtsFilter(e.target.value));
+    }
+
     this.render();
   },
 
-  /** Klappt alle Sektionen auf, wenn mindestens eine eingeklappt ist – sonst alle zu. */
-  toggleAlleSektionen() {
-    const alleOffen = this.eingeklappt.size === 0;
-
-    if (alleOffen) {
-      for (const key of ALLE_SEKTION_KEYS) this.eingeklappt.add(key);
-    } else {
-      this.eingeklappt.clear();
-    }
-
+  setAnsichtsFilter(filter) {
+    this.ausgewaehlterAnsichtsFilter = filter;
     this.render();
   },
 
@@ -41,24 +35,44 @@ const Dashboard = {
     this.render();
   },
 
-  toggleSektion(key) {
-    if (this.eingeklappt.has(key)) {
-      this.eingeklappt.delete(key);
-    } else {
-      this.eingeklappt.add(key);
-    }
-    this.render();
-  },
-
   _gefiltert(aufgaben) {
     let query = aufgaben;
 
+    // 1. Bereich- & Projekt-Filter
     if (this.ausgewaehlterBereich !== "Alle") {
       query = query.filter((a) => (a.Bereich || "").toLowerCase() === this.ausgewaehlterBereich.toLowerCase());
 
       if (this.ausgewaehltesProjekt !== "Alle") {
         query = query.filter((a) => (a.ProjektName || "").toLowerCase() === this.ausgewaehltesProjekt.toLowerCase());
       }
+    }
+
+    // 2. Ansichts-Filter aus dem Dropdown-Menü
+    const heute = heuteIso();
+    const wochenEnde = wochenEndeIso(heute);
+
+    switch (this.ausgewaehlterAnsichtsFilter) {
+      case "P1":
+        query = query.filter((a) => a.Prioritaet === Prioritaet.P1Dringend);
+        break;
+      case "P2":
+        query = query.filter((a) => a.Prioritaet === Prioritaet.P2Wichtig);
+        break;
+      case "P3":
+        query = query.filter((a) => a.Prioritaet === Prioritaet.P3Normal);
+        break;
+      case "Ueberfaellig":
+        query = query.filter((a) => a.Faelligkeit && a.Faelligkeit < heute);
+        break;
+      case "Heute":
+        query = query.filter((a) => a.Faelligkeit === heute);
+        break;
+      case "DieseWoche":
+        query = query.filter((a) => a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde);
+        break;
+      case "Alle":
+      default:
+        break;
     }
 
     return query;
@@ -84,43 +98,24 @@ const Dashboard = {
     this._renderProjektFilter(aufgaben, bereiche);
 
     const offen = aufgaben.filter((a) => a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit);
-    const gefiltert = this._gefiltert(offen);
 
+    // KPI-Übersichtskarten berechnen
     const heute = heuteIso();
     const wochenEnde = wochenEndeIso(heute);
-
     const kpis = {
-      offeneGesamt: gefiltert.length,
-      offenP1: gefiltert.filter((a) => a.Prioritaet === Prioritaet.P1Dringend).length,
-      offenP2: gefiltert.filter((a) => a.Prioritaet === Prioritaet.P2Wichtig).length,
-      heuteFaellig: gefiltert.filter((a) => a.Faelligkeit === heute).length,
-      dieseWocheFaellig: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde).length,
-      ueberfaellig: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit < heute).length,
+      offeneGesamt: offen.length,
+      offenP1: offen.filter((a) => a.Prioritaet === Prioritaet.P1Dringend).length,
+      offenP2: offen.filter((a) => a.Prioritaet === Prioritaet.P2Wichtig).length,
+      heuteFaellig: offen.filter((a) => a.Faelligkeit === heute).length,
+      dieseWocheFaellig: offen.filter((a) => a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde).length,
+      ueberfaellig: offen.filter((a) => a.Faelligkeit && a.Faelligkeit < heute).length,
     };
-
     this._renderKpis(kpis);
 
-    const erledigt = this._gefiltert(aufgaben.filter((a) => a.Status === AufgabenStatus.Erledigt))
-      .sort((a, b) => (b.GeaendertAm || "").localeCompare(a.GeaendertAm || ""))
-      .slice(0, 30);
-
-    const sektionen = [
-      { key: "Ueberfaellig", titel: "Überfällig", items: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit < heute) },
-      { key: "P1", titel: "Top P1", items: gefiltert.filter((a) => a.Prioritaet === Prioritaet.P1Dringend) },
-      { key: "P2", titel: "Top P2", items: gefiltert.filter((a) => a.Prioritaet === Prioritaet.P2Wichtig) },
-      { key: "P3", titel: "Top P3", items: gefiltert.filter((a) => a.Prioritaet === Prioritaet.P3Normal) },
-      { key: "Heute", titel: "Heute", items: gefiltert.filter((a) => a.Faelligkeit === heute) },
-      { key: "DieseWoche", titel: "Diese Woche", items: gefiltert.filter((a) => a.Faelligkeit && a.Faelligkeit >= heute && a.Faelligkeit <= wochenEnde) },
-      { key: "Erledigt", titel: "Erledigt", items: erledigt, keineBegrenzung: true },
-    ];
-
-    for (const sektion of sektionen) {
-      if (!sektion.keineBegrenzung) {
-        sektion.items = this._sortiereNachPrioUndFaelligkeit(sektion.items).slice(0, 10);
-      }
-    }
-
-    this._renderSektionen(sektionen);
+    // Filter anwenden & Liste anzeigen
+    const gefiltert = this._gefiltert(offen);
+    const sortiert = this._sortiereNachPrioUndFaelligkeit(gefiltert);
+    this._renderAufgabenListe(sortiert);
   },
 
   _renderBereichFilter(bereiche) {
@@ -191,39 +186,22 @@ const Dashboard = {
       .join("");
   },
 
-  _renderSektionen(sektionen) {
+  _renderAufgabenListe(items) {
     const container = document.getElementById("dashboard-sektionen");
     container.innerHTML = "";
 
-    document.getElementById("dashboard-toggle-alle-btn").textContent =
-      this.eingeklappt.size === 0 ? "Alle einklappen" : "Alle aufklappen";
+    const wrapper = document.createElement("div");
+    wrapper.className = "sektion";
 
-    for (const sektion of sektionen) {
-      const istEingeklappt = this.eingeklappt.has(sektion.key);
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "sektion";
-
-      const header = document.createElement("div");
-      header.className = "sektion__header";
-      header.innerHTML = `<span class="chevron">${istEingeklappt ? "▶" : "▼"}</span> ${sektion.titel} (${sektion.items.length})`;
-      header.addEventListener("click", () => this.toggleSektion(sektion.key));
-      wrapper.appendChild(header);
-
-      const body = document.createElement("div");
-      body.className = "sektion__body" + (istEingeklappt ? " is-collapsed" : "");
-
-      if (sektion.items.length === 0) {
-        body.innerHTML = `<div class="sektion__empty">Keine Aufgaben.</div>`;
-      } else {
-        for (const aufgabe of sektion.items) {
-          body.appendChild(this._renderAufgabeRow(aufgabe));
-        }
+    if (items.length === 0) {
+      wrapper.innerHTML = `<div class="sektion__empty">Keine Aufgaben für diese Filterauswahl vorhanden.</div>`;
+    } else {
+      for (const aufgabe of items) {
+        wrapper.appendChild(this._renderAufgabeRow(aufgabe));
       }
-
-      wrapper.appendChild(body);
-      container.appendChild(wrapper);
     }
+
+    container.appendChild(wrapper);
   },
 
   _renderAufgabeRow(aufgabe) {
@@ -235,7 +213,7 @@ const Dashboard = {
     if (bereichFarbe) row.style.borderLeftColor = bereichFarbe;
 
     const heute = heuteIso();
-    const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.IstAktiv;
+    const istUeberfaellig = aufgabe.Faelligkeit && aufgabe.Faelligkeit < heute && aufgabe.Status !== AufgabenStatus.Erledigt;
 
     row.innerHTML = `
       <span class="status-dot ${Anzeige.statusDotClass(aufgabe.Status)}">${Anzeige.statusSymbol(aufgabe.Status)}</span>
