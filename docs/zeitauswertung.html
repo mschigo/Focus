@@ -102,7 +102,7 @@
 
     <!-- Top Abweichungen -->
     <div class="card">
-      <h2 class="card-title">📋 Aufgabenübersicht & Abweichungen</h2>
+      <h2 class="card-title">🕐 Zeitbuchungen im gewählten Zeitraum</h2>
       <div id="tabelle-abweichungen"></div>
     </div>
 
@@ -111,7 +111,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/store.js"></script>
+<script src="js/store.js?v=2"></script>
 <script>
 let barChart = null;
 let pieChart = null;
@@ -225,48 +225,71 @@ function aktualisiereProjektDropdown(bereich) {
   }
 }
 
-function holeGefilterteAufgaben() {
+// Aufgaben nur nach Bereich/Projekt filtern (ohne Datum) – Basis für beide
+// folgenden Auswertungen (Soll auf Aufgaben-Ebene, Ist auf Buchungs-Ebene).
+function holeAufgabenNachBereichProjekt() {
   const gewaehlterBereich = document.getElementById("filter-bereich").value;
   const gewaehltesProjekt = document.getElementById("filter-projekt").value;
-  const vonDatum = document.getElementById("filter-von").value;
-  const bisDatum = document.getElementById("filter-bis").value;
 
   let aufgaben = Store.getAufgaben();
 
-  // 1. Bereichsfilter
   if (gewaehlterBereich !== "Alle") {
     aufgaben = aufgaben.filter(a => (a.Bereich || "").toLowerCase() === gewaehlterBereich.toLowerCase());
   }
 
-  // 2. Projektfilter
   if (gewaehltesProjekt !== "Alle") {
     aufgaben = aufgaben.filter(a => (a.ProjektName || "").toLowerCase() === gewaehltesProjekt.toLowerCase());
-  }
-
-  // 3. Datumsfilter (Fälligkeit oder Erstellungsdatum)
-  if (vonDatum) {
-    aufgaben = aufgaben.filter(a => {
-      const d = a.Faelligkeit || (a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : null);
-      return d && d >= vonDatum;
-    });
-  }
-
-  if (bisDatum) {
-    aufgaben = aufgaben.filter(a => {
-      const d = a.Faelligkeit || (a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : null);
-      return d && d <= bisDatum;
-    });
   }
 
   return aufgaben;
 }
 
+// Soll-Zeit ist eine einmalige Schätzung pro Aufgabe (kein Datum je Buchung),
+// daher weiterhin über Fälligkeit/Erstellungsdatum der AUFGABE gefiltert.
+function holeAufgabenImZeitraum(aufgaben, vonDatum, bisDatum) {
+  if (!vonDatum && !bisDatum) return aufgaben;
+
+  return aufgaben.filter(a => {
+    const d = a.Faelligkeit || (a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : null);
+    if (!d) return false;
+    if (vonDatum && d < vonDatum) return false;
+    if (bisDatum && d > bisDatum) return false;
+    return true;
+  });
+}
+
+// Ist-Zeit: jede einzelne Zeitbuchung hat ihr EIGENES Datum – deshalb wird
+// hier je Buchung gefiltert, nicht je Aufgabe. Das ist der Kern-Fix dafür,
+// dass Zeit, die an unterschiedlichen Tagen (auch über Monatsgrenzen hinweg)
+// auf dieselbe Aufgabe gebucht wurde, im jeweils richtigen Zeitraum landet.
+function holeZeitbuchungenImZeitraum(aufgaben, vonDatum, bisDatum) {
+  const buchungen = [];
+
+  aufgaben.forEach(a => {
+    (a.Zeitbuchungen || []).forEach(z => {
+      if (vonDatum && z.Datum < vonDatum) return;
+      if (bisDatum && z.Datum > bisDatum) return;
+      buchungen.push({
+        ...z,
+        Titel: a.Titel,
+        ProjektName: a.ProjektName || "Ohne Projekt",
+      });
+    });
+  });
+
+  return buchungen;
+}
+
 function rendereAuswertung() {
-  const aufgaben = holeGefilterteAufgaben();
+  const vonDatum = document.getElementById("filter-von").value;
+  const bisDatum = document.getElementById("filter-bis").value;
+
+  const aufgabenGefiltert = holeAufgabenNachBereichProjekt();
+  const aufgabenImZeitraum = holeAufgabenImZeitraum(aufgabenGefiltert, vonDatum, bisDatum);
+  const buchungenImZeitraum = holeZeitbuchungenImZeitraum(aufgabenGefiltert, vonDatum, bisDatum);
 
   let totalSoll = 0;
   let totalIst = 0;
-  let anzahl = aufgaben.length;
 
   const projektStats = {};
 
@@ -276,34 +299,37 @@ function rendereAuswertung() {
     projektStats[p.Name] = { soll: 0, ist: 0 };
   });
 
-  aufgaben.forEach(a => {
+  aufgabenImZeitraum.forEach(a => {
     const soll = parseFloat(a.SollZeit) || 0;
-    const ist = parseFloat(a.IstZeit) || 0;
-
     totalSoll += soll;
-    totalIst += ist;
 
     const pName = a.ProjektName || "Ohne Projekt";
-    if (!projektStats[pName]) {
-      projektStats[pName] = { soll: 0, ist: 0 };
-    }
+    if (!projektStats[pName]) projektStats[pName] = { soll: 0, ist: 0 };
     projektStats[pName].soll += soll;
+  });
+
+  buchungenImZeitraum.forEach(b => {
+    const ist = parseFloat(b.Stunden) || 0;
+    totalIst += ist;
+
+    const pName = b.ProjektName || "Ohne Projekt";
+    if (!projektStats[pName]) projektStats[pName] = { soll: 0, ist: 0 };
     projektStats[pName].ist += ist;
   });
 
   const diff = totalIst - totalSoll;
   document.getElementById("kpi-soll").textContent = `${totalSoll.toFixed(1)}h`;
   document.getElementById("kpi-ist").textContent = `${totalIst.toFixed(1)}h`;
-  
+
   const diffEl = document.getElementById("kpi-diff");
   diffEl.textContent = `${diff >= 0 ? "+" : ""}${diff.toFixed(1)}h`;
   diffEl.style.color = diff > 0 ? "var(--color-p1)" : (diff < 0 ? "#2e7d32" : "inherit");
 
-  document.getElementById("kpi-anzahl").textContent = anzahl;
+  document.getElementById("kpi-anzahl").textContent = aufgabenImZeitraum.length;
 
   rendereBalkenDiagramm(projektStats);
   rendereKuchenDiagramm(projektStats);
-  rendereTabelle(aufgaben);
+  rendereTabelle(buchungenImZeitraum);
 }
 
 function rendereBalkenDiagramm(projektStats) {
@@ -356,50 +382,37 @@ function rendereKuchenDiagramm(projektStats) {
   });
 }
 
-function rendereTabelle(aufgaben) {
+function rendereTabelle(buchungen) {
   const container = document.getElementById("tabelle-abweichungen");
-  
-  const alleAufgaben = aufgaben
-    .map(a => {
-      const soll = parseFloat(a.SollZeit) || 0;
-      const ist = parseFloat(a.IstZeit) || 0;
-      return { ...a, soll, ist, diff: ist - soll };
-    })
-    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
-  if (alleAufgaben.length === 0) {
-    container.innerHTML = `<p style="color: var(--color-text-muted); font-size: 13px;">Keine Aufgaben für diesen Zeitraum/Filter vorhanden.</p>`;
+  if (buchungen.length === 0) {
+    container.innerHTML = `<p style="color: var(--color-text-muted); font-size: 13px;">Keine Zeitbuchungen für diesen Zeitraum/Filter vorhanden.</p>`;
     return;
   }
+
+  // Neueste Buchung zuerst.
+  const sortiert = [...buchungen].sort((a, b) => (b.Datum || "").localeCompare(a.Datum || ""));
 
   let html = `
     <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;">
       <thead>
         <tr style="border-bottom: 1px solid var(--color-border, #ccc); padding-bottom: 8px;">
+          <th style="padding: 8px;">Datum</th>
           <th style="padding: 8px;">Titel</th>
           <th style="padding: 8px;">Projekt</th>
-          <th style="padding: 8px;">Fälligkeit / Datum</th>
-          <th style="padding: 8px;">Soll</th>
-          <th style="padding: 8px;">Ist</th>
-          <th style="padding: 8px;">Abweichung</th>
+          <th style="padding: 8px;">Stunden</th>
         </tr>
       </thead>
       <tbody>
   `;
 
-  alleAufgaben.forEach(a => {
-    const diffText = `${a.diff >= 0 ? "+" : ""}${a.diff.toFixed(1)}h`;
-    const diffColor = a.diff > 0 ? "var(--color-p1)" : (a.diff < 0 ? "#2e7d32" : "inherit");
-    const datum = a.Faelligkeit || (a.ErstelltAm ? a.ErstelltAm.substring(0, 10) : "-");
-
+  sortiert.forEach(b => {
     html += `
       <tr style="border-bottom: 1px solid var(--color-border, #eee);">
-        <td style="padding: 8px;">${escapeHtml(a.Titel)}</td>
-        <td style="padding: 8px; color: var(--color-text-muted);">${escapeHtml(a.ProjektName || "-")}</td>
-        <td style="padding: 8px; color: var(--color-text-muted);">${datum}</td>
-        <td style="padding: 8px;">${a.soll.toFixed(1)}h</td>
-        <td style="padding: 8px;">${a.ist.toFixed(1)}h</td>
-        <td style="padding: 8px; font-weight: bold; color: ${diffColor};">${diffText}</td>
+        <td style="padding: 8px;">${Anzeige.faelligkeitText(b.Datum)}</td>
+        <td style="padding: 8px;">${escapeHtml(b.Titel)}</td>
+        <td style="padding: 8px; color: var(--color-text-muted);">${escapeHtml(b.ProjektName || "-")}</td>
+        <td style="padding: 8px;">${(parseFloat(b.Stunden) || 0).toFixed(2)}h</td>
       </tr>
     `;
   });

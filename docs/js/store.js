@@ -70,6 +70,28 @@ function linksAusAufgabe(a) {
   return [];
 }
 
+// Liest die Zeitbuchungen einer Aufgabe: neues Format ist ein Array
+// "Zeitbuchungen" ({ Id, Datum, Stunden }), damit an unterschiedlichen Tagen
+// (auch über Monatsgrenzen hinweg) erfasste Ist-Zeit in der Auswertung korrekt
+// dem jeweiligen Tag zugeordnet werden kann. Ältere Aufgaben hatten nur eine
+// einzelne "IstZeit"-Zahl ohne Datum – wird transparent auf einen plausiblen
+// Tag (letzte Änderung, sonst Erstellung, sonst heute) migriert.
+function zeitbuchungenAusAufgabe(a) {
+  if (Array.isArray(a.Zeitbuchungen) && a.Zeitbuchungen.length > 0) {
+    return a.Zeitbuchungen
+      .filter((z) => z && z.Datum && !isNaN(parseFloat(z.Stunden)) && parseFloat(z.Stunden) > 0)
+      .map((z) => ({ Id: z.Id || neueId(), Datum: z.Datum, Stunden: Math.round(parseFloat(z.Stunden) * 100) / 100 }));
+  }
+
+  const legacyIst = parseFloat(a.IstZeit) || 0;
+  if (legacyIst > 0) {
+    const datum = ((a.GeaendertAm || a.ErstelltAm || nowIso()) + "").slice(0, 10);
+    return [{ Id: neueId(), Datum: datum, Stunden: legacyIst }];
+  }
+
+  return [];
+}
+
 function normalisiereDaten(parsed) {
   const bereichFarben = parsed?.Konfiguration?.BereichFarben;
   return {
@@ -208,6 +230,8 @@ const Store = {
       const projekt = projektLookup.get(a.ProjektId);
       const istAktiv = a.Status === AufgabenStatus.Offen || a.Status === AufgabenStatus.InArbeit;
       const istUeberfaellig = !!a.Faelligkeit && a.Faelligkeit < heute && istAktiv;
+      const zeitbuchungen = zeitbuchungenAusAufgabe(a);
+      const istZeit = zeitbuchungen.reduce((summe, z) => summe + z.Stunden, 0);
 
       return {
         ...a,
@@ -220,7 +244,8 @@ const Store = {
         Checkliste: a.Checkliste || [],
         Links: linksAusAufgabe(a),
         SollZeit: parseFloat(a.SollZeit) || 0,
-        IstZeit: parseFloat(a.IstZeit) || 0,
+        Zeitbuchungen: zeitbuchungen,
+        IstZeit: Math.round(istZeit * 100) / 100,
       };
     });
   },
@@ -277,6 +302,13 @@ const Store = {
     const now = nowIso();
     const index = this._daten.Aufgaben.findIndex((a) => a.Id === aufgabe.Id);
 
+    const zeitbuchungen = Array.isArray(aufgabe.Zeitbuchungen)
+      ? aufgabe.Zeitbuchungen
+          .filter((z) => z && z.Datum && parseFloat(z.Stunden) > 0)
+          .map((z) => ({ Id: z.Id || neueId(), Datum: z.Datum, Stunden: Math.round(parseFloat(z.Stunden) * 100) / 100 }))
+      : [];
+    const istZeitSumme = Math.round(zeitbuchungen.reduce((summe, z) => summe + z.Stunden, 0) * 100) / 100;
+
     if (index === -1) {
       const neu = {
         Id: aufgabe.Id || neueId(),
@@ -290,7 +322,8 @@ const Store = {
         Links: Array.isArray(aufgabe.Links) ? aufgabe.Links.map((l) => (l || "").trim()).filter(Boolean) : [],
         Checkliste: aufgabe.Checkliste || [],
         SollZeit: parseFloat(aufgabe.SollZeit) || 0,
-        IstZeit: parseFloat(aufgabe.IstZeit) || 0,
+        Zeitbuchungen: zeitbuchungen,
+        IstZeit: istZeitSumme,
         ErstelltAm: now,
         GeaendertAm: now,
       };
@@ -309,7 +342,8 @@ const Store = {
         Links: Array.isArray(aufgabe.Links) ? aufgabe.Links.map((l) => (l || "").trim()).filter(Boolean) : [],
         Checkliste: aufgabe.Checkliste || [],
         SollZeit: parseFloat(aufgabe.SollZeit) || 0,
-        IstZeit: parseFloat(aufgabe.IstZeit) || 0,
+        Zeitbuchungen: zeitbuchungen,
+        IstZeit: istZeitSumme,
         GeaendertAm: now,
       };
     }
@@ -623,6 +657,73 @@ const Linkfelder = {
     row.appendChild(oeffnenBtn);
     row.appendChild(entfernenBtn);
     container.appendChild(row);
+  },
+};
+
+/**
+ * Zeiterfassung (Ist-Zeit) mit Datum je Buchung (Neue Aufgabe & Bearbeiten-Popup).
+ * Jede Buchung ({ Id, Datum, Stunden }) wird einzeln mit ihrem eigenen Datum
+ * gespeichert, damit die Auswertung Ist-Zeit korrekt dem jeweiligen Tag
+ * zuordnen kann – auch wenn an unterschiedlichen Tagen (über Monatsgrenzen
+ * hinweg) für dieselbe Aufgabe Zeit gebucht wird.
+ */
+const Zeiterfassung = {
+  render(container, buchungen, onChange) {
+    if (!container) return;
+
+    const gesamt = buchungen.reduce((summe, b) => summe + (parseFloat(b.Stunden) || 0), 0);
+    const sortiert = [...buchungen].sort((a, b) => (b.Datum || "").localeCompare(a.Datum || ""));
+
+    const listeHtml = sortiert.length === 0
+      ? `<p style="color: var(--color-text-muted); font-size: 13px; margin: 4px 0;">Noch keine Zeit erfasst.</p>`
+      : sortiert
+          .map(
+            (b) => `
+        <div class="zeitbuchung-item" data-id="${b.Id}">
+          <span class="zeitbuchung-datum">${Anzeige.faelligkeitText(b.Datum)}</span>
+          <span class="zeitbuchung-stunden">${b.Stunden} h</span>
+          <button type="button" class="icon-btn zeitbuchung-entfernen" data-id="${b.Id}" title="Entfernen">✕</button>
+        </div>`
+          )
+          .join("");
+
+    container.innerHTML = `
+      <div class="zeitbuchung-gesamt">Gesamt erfasst: <strong>${Math.round(gesamt * 100) / 100} h</strong></div>
+      <div class="zeitbuchung-liste">${listeHtml}</div>
+      <div class="zeitbuchung-add-row">
+        <input type="date" class="form-input zeitbuchung-add-datum" lang="de-CH" />
+        <input type="number" step="0.25" min="0.25" class="form-input zeitbuchung-add-stunden" placeholder="Std." />
+        <button type="button" class="btn-secondary zeitbuchung-add-btn">+</button>
+      </div>
+    `;
+
+    const datumInput = container.querySelector(".zeitbuchung-add-datum");
+    const stundenInput = container.querySelector(".zeitbuchung-add-stunden");
+    if (datumInput) datumInput.value = heuteIso();
+
+    container.querySelectorAll(".zeitbuchung-entfernen").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const idx = buchungen.findIndex((b) => b.Id === id);
+        if (idx !== -1) buchungen.splice(idx, 1);
+        this.render(container, buchungen, onChange);
+        onChange(buchungen);
+      });
+    });
+
+    container.querySelector(".zeitbuchung-add-btn")?.addEventListener("click", () => {
+      const datum = datumInput?.value;
+      const stunden = parseFloat(stundenInput?.value);
+
+      if (!datum || !stunden || stunden <= 0) {
+        if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Bitte Datum und Stunden (> 0) angeben.", true);
+        return;
+      }
+
+      buchungen.push({ Id: neueId(), Datum: datum, Stunden: Math.round(stunden * 100) / 100 });
+      this.render(container, buchungen, onChange);
+      onChange(buchungen);
+    });
   },
 };
 

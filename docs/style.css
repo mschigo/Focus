@@ -641,9 +641,19 @@ main {
   }
 
   .checkliste-add-row,
-  .link-feld-row {
+  .link-feld-row,
+  .zeitbuchung-add-row {
     margin-top: 5px;
     margin-bottom: 5px;
+  }
+
+  .zeitbuchung-item {
+    padding: 4px 0;
+    font-size: 12px;
+  }
+
+  .zeitbuchung-add-row .zeitbuchung-add-stunden {
+    flex: 0 0 70px;
   }
 
   .checkliste-item {
@@ -952,6 +962,50 @@ select.form-input {
   min-width: 24px;
   text-align: center;
   text-decoration: none;
+}
+
+/* ---------- Zeiterfassung (Ist-Zeit mit Datum je Buchung) ---------- */
+
+.zeitbuchung-gesamt {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.zeitbuchung-liste {
+  margin-bottom: 8px;
+}
+
+.zeitbuchung-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+}
+
+.zeitbuchung-datum {
+  color: var(--color-text-muted);
+  min-width: 78px;
+}
+
+.zeitbuchung-stunden {
+  flex: 1;
+  font-weight: 600;
+}
+
+.zeitbuchung-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.zeitbuchung-add-row .zeitbuchung-add-stunden {
+  flex: 0 0 90px;
+}
+
+.zeitbuchung-add-row .zeitbuchung-add-datum {
+  flex: 1;
 }
 
 .popup-footer {

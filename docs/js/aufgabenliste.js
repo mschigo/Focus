@@ -5,6 +5,7 @@
 const Aufgabenliste = {
   _checklisteEntwurf: [],
   _linksEntwurf: [],
+  _zeitbuchungenEntwurf: [],
 
   init() {
     this._wireDetailsPopupSchliessen();
@@ -30,6 +31,7 @@ const Aufgabenliste = {
     }));
 
     this._linksEntwurf = [...(aufgabe.Links || [])];
+    this._zeitbuchungenEntwurf = (aufgabe.Zeitbuchungen || []).map((z) => ({ ...z }));
 
     const headerTitle = document.querySelector("#details-popup .popup__header h2");
     if (headerTitle) headerTitle.textContent = "✏️ Aufgabe bearbeiten";
@@ -73,7 +75,6 @@ const Aufgabenliste = {
     const bereiche = Store.getBereiche();
     const aktuellerBereich = aufgabe.Bereich || bereiche[0] || "";
 
-    let aktuellerIstWert = parseFloat(aufgabe.IstZeit) || 0;
     let aktuellerSollWert = parseFloat(aufgabe.SollZeit) || 0;
 
     body.innerHTML = `
@@ -117,16 +118,17 @@ const Aufgabenliste = {
           </div>
         </div>
 
-        <!-- Zeiterfassungs-Felder als Textfeld für Rechnungen -->
-        <div class="form-row">
-          <div class="form-field">
-            <label for="edit-sollzeit">Soll-Zeit (Std.)</label>
-            <input type="text" id="edit-sollzeit" class="form-input" placeholder="z. B. 3 oder +1" value="${aktuellerSollWert || ""}" />
-          </div>
-          <div class="form-field">
-            <label for="edit-istzeit">Ist-Zeit (Std.)</label>
-            <input type="text" id="edit-istzeit" class="form-input" placeholder="z. B. 2 oder +0.5" value="${aktuellerIstWert || ""}" />
-          </div>
+        <!-- Soll-Zeit: einzelne Zahl (Schätzung). Rechenausdrücke wie "+1" möglich. -->
+        <div class="form-field">
+          <label for="edit-sollzeit">Soll-Zeit (Std.)</label>
+          <input type="text" id="edit-sollzeit" class="form-input" placeholder="z. B. 3 oder +1" value="${aktuellerSollWert || ""}" />
+        </div>
+
+        <!-- Ist-Zeit: einzelne Buchungen mit Datum, damit die Auswertung auch
+             über Monatsgrenzen hinweg korrekt bleibt. -->
+        <div class="form-field">
+          <label>⏱ Erfasste Zeit (Ist)</label>
+          <div id="edit-zeitbuchungen-container"></div>
         </div>
 
         <div class="form-field">
@@ -161,6 +163,7 @@ const Aufgabenliste = {
     this._renderPrioritaetChips(aufgabe.Prioritaet);
     this._renderChecklisteEntwurf();
     Linkfelder.render(document.getElementById("edit-links-container"), this._linksEntwurf, () => {});
+    Zeiterfassung.render(document.getElementById("edit-zeitbuchungen-container"), this._zeitbuchungenEntwurf, () => {});
 
     const bereichSelect = document.getElementById("edit-bereich");
     const projektSelect = document.getElementById("edit-projekt");
@@ -176,22 +179,6 @@ const Aufgabenliste = {
     ladeProjekte();
 
     // Automatische Auswertung beim Verlassen des Feldes (blur) oder Drücken von Enter
-    const istInput = document.getElementById("edit-istzeit");
-    if (istInput) {
-      const verarbeiteIstZeit = () => {
-        aktuellerIstWert = this._wertBerechnen(aktuellerIstWert, istInput.value);
-        istInput.value = aktuellerIstWert > 0 ? aktuellerIstWert : "";
-      };
-
-      istInput.addEventListener("blur", verarbeiteIstZeit);
-      istInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          verarbeiteIstZeit();
-        }
-      });
-    }
-
     const sollInput = document.getElementById("edit-sollzeit");
     if (sollInput) {
       const verarbeiteSollZeit = () => {
@@ -270,14 +257,11 @@ const Aufgabenliste = {
     document.getElementById("edit-aufgabe-form")?.addEventListener("submit", (e) => {
       e.preventDefault();
 
-      if (istInput) {
-        aktuellerIstWert = this._wertBerechnen(aktuellerIstWert, istInput.value);
-      }
       if (sollInput) {
         aktuellerSollWert = this._wertBerechnen(aktuellerSollWert, sollInput.value);
       }
 
-      this._speichern(aufgabe.Id, aktuellerSollWert, aktuellerIstWert);
+      this._speichern(aufgabe.Id, aktuellerSollWert);
     });
   },
 
@@ -359,7 +343,8 @@ const Aufgabenliste = {
       Notizen: aufgabe.Notizen,
       Links: [...(aufgabe.Links || [])],
       SollZeit: aufgabe.SollZeit || 0,
-      IstZeit: aufgabe.IstZeit || 0,
+      // Zeitbuchungen bewusst NICHT übernehmen: eine Kopie ist noch nicht bearbeitet.
+      Zeitbuchungen: [],
       Checkliste: (aufgabe.Checkliste || []).map((c) => ({
         Id: neueId(),
         Titel: c.Titel || c.Text || "",
@@ -369,7 +354,7 @@ const Aufgabenliste = {
     if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Aufgabe dupliziert.");
   },
 
-  _speichern(aufgabeId, sollZeit, istZeit) {
+  _speichern(aufgabeId, sollZeit) {
     const titel = document.getElementById("edit-titel")?.value.trim();
     if (!titel) {
       if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Titel ist erforderlich.", true);
@@ -400,7 +385,7 @@ const Aufgabenliste = {
         Startdatum: finalStart,
         Faelligkeit: finalFaellig,
         SollZeit: parseFloat(sollZeit) || 0,
-        IstZeit: parseFloat(istZeit) || 0,
+        Zeitbuchungen: this._zeitbuchungenEntwurf,
         Notizen: document.getElementById("edit-notizen")?.value.trim() || "",
         Links: this._linksEntwurf.map((l) => l.trim()).filter(Boolean),
         Checkliste: this._checklisteEntwurf,

@@ -4,6 +4,7 @@
 
 let tempNeueCheckliste = [];
 let tempNeueLinks = [""];
+let tempNeueZeitbuchungen = [];
 
 // Lokale Hilfsfunktionen als Fallback
 function appEscapeHtml(text) {
@@ -120,8 +121,9 @@ const App = {
       const sollEl = document.getElementById("neu-sollzeit");
       if (sollEl) sollEl.value = "";
 
-      const istEl = document.getElementById("neu-istzeit");
-      if (istEl) istEl.value = "";
+      tempNeueZeitbuchungen = [];
+      const zeitContainer = document.getElementById("neu-zeitbuchungen-container");
+      if (zeitContainer) Zeiterfassung.render(zeitContainer, tempNeueZeitbuchungen, () => {});
 
       if (startEl) startEl.value = "";
       if (faelligEl) faelligEl.value = "";
@@ -240,7 +242,7 @@ const App = {
         Notizen: document.getElementById("neu-notizen")?.value || "",
         Links: tempNeueLinks.map((l) => l.trim()).filter(Boolean),
         SollZeit: parseFloat(document.getElementById("neu-sollzeit")?.value) || 0,
-        IstZeit: parseFloat(document.getElementById("neu-istzeit")?.value) || 0,
+        Zeitbuchungen: tempNeueZeitbuchungen.map((z) => ({ ...z })),
         Status: AufgabenStatus.Offen,
         Checkliste: [...tempNeueCheckliste],
       };
@@ -249,6 +251,7 @@ const App = {
         Store.addOrUpdateAufgabe(neueAufgabe);
         tempNeueCheckliste = [];
         tempNeueLinks = [""];
+        tempNeueZeitbuchungen = [];
         if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Aufgabe erstellt.");
         schliessePopup();
       } catch (err) {
