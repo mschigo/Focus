@@ -210,26 +210,12 @@ const Aufgabenliste = {
       });
     }
 
-    // Automatische Synchronisation der Datumsfelder im Bearbeiten-Popup
     const editStartInput = document.getElementById("edit-startdatum");
     const editFaelligInput = document.getElementById("edit-faelligkeit");
-    let editStartManuell = Boolean(aufgabe.Startdatum);
-    let editFaelligManuell = Boolean(aufgabe.Faelligkeit);
 
     if (editStartInput && editFaelligInput) {
-      editStartInput.addEventListener("input", () => {
-        editStartManuell = true;
-        if (!editFaelligManuell || !editFaelligInput.value) {
-          editFaelligInput.value = editStartInput.value;
-        }
-      });
-
-      editFaelligInput.addEventListener("input", () => {
-        editFaelligManuell = true;
-        if (!editStartManuell || !editStartInput.value) {
-          editStartInput.value = editFaelligInput.value;
-        }
-      });
+      editStartInput.addEventListener("input", () => korrigiereDatumsfelder(editStartInput, editFaelligInput));
+      editFaelligInput.addEventListener("input", () => korrigiereDatumsfelder(editStartInput, editFaelligInput));
     }
 
     // Checklisten-Punkt hinzufügen
@@ -397,10 +383,8 @@ const Aufgabenliste = {
     const prioritaetChip = document.querySelector("#edit-prioritaet-chips .chip.is-selected");
     const prioritaet = prioritaetChip ? prioritaetChip.dataset.prioritaet : Prioritaet.P3Normal;
 
-    let finalStart = document.getElementById("edit-startdatum")?.value || null;
-    let finalFaellig = document.getElementById("edit-faelligkeit")?.value || null;
-    if (finalFaellig && !finalStart) finalStart = finalFaellig;
-    if (finalStart && !finalFaellig) finalFaellig = finalStart;
+    const finalStart = document.getElementById("edit-startdatum")?.value || null;
+    const finalFaellig = document.getElementById("edit-faelligkeit")?.value || null;
 
     try {
       Store.addOrUpdateAufgabe({

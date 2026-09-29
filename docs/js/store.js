@@ -46,6 +46,21 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function korrigiereDatumsreihenfolge(startdatum, faelligkeit) {
+  const start = startdatum || null;
+  const faellig = faelligkeit || null;
+  return {
+    Startdatum: start,
+    Faelligkeit: start && faellig && start > faellig ? start : faellig,
+  };
+}
+
+function korrigiereDatumsfelder(startInput, faelligInput) {
+  if (!startInput || !faelligInput) return;
+  const daten = korrigiereDatumsreihenfolge(startInput.value, faelligInput.value);
+  faelligInput.value = daten.Faelligkeit || "";
+}
+
 function wochenEndeIso(heute) {
   const d = new Date(`${heute}T00:00:00`);
   const dayOfWeek = d.getDay();
@@ -329,6 +344,7 @@ const Store = {
 
     const now = nowIso();
     const index = this._daten.Aufgaben.findIndex((a) => a.Id === aufgabe.Id);
+    const daten = korrigiereDatumsreihenfolge(aufgabe.Startdatum, aufgabe.Faelligkeit);
 
     const zeitbuchungen = Array.isArray(aufgabe.Zeitbuchungen)
       ? aufgabe.Zeitbuchungen
@@ -344,8 +360,8 @@ const Store = {
         ProjektId: aufgabe.ProjektId,
         Prioritaet: aufgabe.Prioritaet || Prioritaet.P3Normal,
         Status: aufgabe.Status || AufgabenStatus.Offen,
-        Startdatum: aufgabe.Startdatum || null,
-        Faelligkeit: aufgabe.Faelligkeit || null,
+        Startdatum: daten.Startdatum,
+        Faelligkeit: daten.Faelligkeit,
         Notizen: aufgabe.Notizen || "",
         Links: Array.isArray(aufgabe.Links) ? aufgabe.Links.map((l) => (l || "").trim()).filter(Boolean) : [],
         Checkliste: aufgabe.Checkliste || [],
@@ -364,8 +380,8 @@ const Store = {
         ProjektId: aufgabe.ProjektId,
         Prioritaet: aufgabe.Prioritaet,
         Status: aufgabe.Status,
-        Startdatum: aufgabe.Startdatum || null,
-        Faelligkeit: aufgabe.Faelligkeit || null,
+        Startdatum: daten.Startdatum,
+        Faelligkeit: daten.Faelligkeit,
         Notizen: aufgabe.Notizen || "",
         Links: Array.isArray(aufgabe.Links) ? aufgabe.Links.map((l) => (l || "").trim()).filter(Boolean) : [],
         Checkliste: aufgabe.Checkliste || [],
