@@ -164,7 +164,21 @@ const Aufgabenliste = {
     this._renderPrioritaetChips(aufgabe.Prioritaet);
     this._renderChecklisteEntwurf();
     Linkfelder.render(document.getElementById("edit-links-container"), this._linksEntwurf, () => {});
-    Zeiterfassung.render(document.getElementById("edit-zeitbuchungen-container"), this._zeitbuchungenEntwurf, () => {});
+    Zeiterfassung.render(
+      document.getElementById("edit-zeitbuchungen-container"),
+      this._zeitbuchungenEntwurf,
+      () => {},
+      () => {
+        // Enter bei Stunden/Datum: Buchung ist bereits hinzugefügt – Aufgabe
+        // gleich automatisch speichern, ohne das Popup zu schließen, damit
+        // bei Bedarf direkt weitere Zeit erfasst werden kann.
+        const sollInputAktuell = document.getElementById("edit-sollzeit");
+        if (sollInputAktuell) {
+          aktuellerSollWert = this._wertBerechnen(aktuellerSollWert, sollInputAktuell.value);
+        }
+        this._speichern(aufgabe.Id, aktuellerSollWert, false);
+      }
+    );
 
     const bereichSelect = document.getElementById("edit-bereich");
     const projektSelect = document.getElementById("edit-projekt");
@@ -367,7 +381,7 @@ const Aufgabenliste = {
     if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Aufgabe dupliziert.");
   },
 
-  _speichern(aufgabeId, sollZeit) {
+  _speichern(aufgabeId, sollZeit, schliessenNachSpeichern = true) {
     const titel = document.getElementById("edit-titel")?.value.trim();
     if (!titel) {
       if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Titel ist erforderlich.", true);
@@ -405,7 +419,9 @@ const Aufgabenliste = {
       });
 
       if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Aufgabe gespeichert.");
-      App.schliesseDetails();
+      if (schliessenNachSpeichern) {
+        App.schliesseDetails();
+      }
     } catch (err) {
       if (typeof Anzeige !== "undefined") Anzeige.zeigeToast(err.message, true);
     }

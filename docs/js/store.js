@@ -668,7 +668,7 @@ const Linkfelder = {
  * hinweg) für dieselbe Aufgabe Zeit gebucht wird.
  */
 const Zeiterfassung = {
-  render(container, buchungen, onChange) {
+  render(container, buchungen, onChange, onEnterHinzugefuegt) {
     if (!container) return;
 
     const gesamt = buchungen.reduce((summe, b) => summe + (parseFloat(b.Stunden) || 0), 0);
@@ -711,18 +711,37 @@ const Zeiterfassung = {
       });
     });
 
-    container.querySelector(".zeitbuchung-add-btn")?.addEventListener("click", () => {
+    const hinzufuegen = () => {
       const datum = datumInput?.value;
       const stunden = parseFloat(stundenInput?.value);
 
       if (!datum || !stunden || stunden <= 0) {
         if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Bitte Datum und Stunden (> 0) angeben.", true);
-        return;
+        return false;
       }
 
       buchungen.push({ Id: neueId(), Datum: datum, Stunden: Math.round(stunden * 100) / 100 });
       this.render(container, buchungen, onChange);
       onChange(buchungen);
+      return true;
+    };
+
+    container.querySelector(".zeitbuchung-add-btn")?.addEventListener("click", () => {
+      hinzufuegen();
+    });
+
+    // Enter im Stunden- oder Datumsfeld: Buchung hinzufügen statt das umgebende
+    // Formular ungewollt vorzeitig abzuschicken – und, falls gewünscht (z.B. im
+    // Bearbeiten-Popup), die Aufgabe gleich automatisch speichern.
+    [stundenInput, datumInput].forEach((input) => {
+      input?.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        const erfolgreich = hinzufuegen();
+        if (erfolgreich && typeof onEnterHinzugefuegt === "function") {
+          onEnterHinzugefuegt();
+        }
+      });
     });
   },
 };
