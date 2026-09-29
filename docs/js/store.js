@@ -49,7 +49,7 @@ function nowIso() {
 function wochenEndeIso(heute) {
   const d = new Date(`${heute}T00:00:00`);
   const dayOfWeek = d.getDay();
-  d.setDate(d.getDate() + (6 - dayOfWeek));
+  d.setDate(d.getDate() + ((7 - dayOfWeek) % 7));
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -104,6 +104,24 @@ function normalisiereDaten(parsed) {
   };
 }
 
+function validiereImportDaten(parsed) {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Die Importdatei muss ein JSON-Objekt enthalten.");
+  }
+  if (!Array.isArray(parsed.Aufgaben) || !Array.isArray(parsed.Projekte)) {
+    throw new Error('Die Importdatei muss die Listen "Aufgaben" und "Projekte" enthalten.');
+  }
+  if (!parsed.Konfiguration || typeof parsed.Konfiguration !== "object" || Array.isArray(parsed.Konfiguration) ||
+      !Array.isArray(parsed.Konfiguration.Bereiche)) {
+    throw new Error('Die Importdatei muss "Konfiguration.Bereiche" als Liste enthalten.');
+  }
+  if (parsed.Konfiguration.BereichFarben !== undefined &&
+      (!parsed.Konfiguration.BereichFarben || typeof parsed.Konfiguration.BereichFarben !== "object" ||
+       Array.isArray(parsed.Konfiguration.BereichFarben))) {
+    throw new Error('"Konfiguration.BereichFarben" muss ein Objekt sein.');
+  }
+}
+
 const Store = {
   _daten: null,
   _userId: null,
@@ -137,6 +155,9 @@ const Store = {
           this._notifyAuthChange(true);
         } catch (err) {
           console.error("Focus: Fehler beim Laden nach Login.", err);
+          if (typeof Anzeige !== "undefined") {
+            Anzeige.zeigeToast("Daten konnten nicht geladen werden: " + err.message, true);
+          }
         }
       } else {
         this._daten = null;
@@ -178,7 +199,14 @@ const Store = {
     }
 
     this._daten = { Aufgaben: [], Projekte: [], Konfiguration: { Bereiche: ["Arbeit", "Privat"], BereichFarben: {} } };
-    await supabaseClient.from("focus_daten").insert({ user_id: userId, daten: this._daten });
+    const { error: insertError } = await supabaseClient
+      .from("focus_daten")
+      .insert({ user_id: userId, daten: this._daten });
+    if (insertError) {
+      this._daten = null;
+      this._userId = null;
+      throw new Error("Nutzerdaten konnten nicht angelegt werden: " + insertError.message);
+    }
     this._migriereLokaleBereichFarben();
   },
 
@@ -412,6 +440,14 @@ const Store = {
       this._daten.Konfiguration.Bereiche.push(b);
     }
 
+    const konflikt = this._daten.Projekte.some(
+      (p) => (p.Bereich || "").trim().toLowerCase() === b.toLowerCase() &&
+             (p.Name || "").trim().toLowerCase() === n.toLowerCase()
+    );
+    if (konflikt) {
+      throw new Error(`Im Bereich "${b}" existiert bereits ein Projekt mit diesem Namen.`);
+    }
+
     const projekt = { Id: neueId(), Name: n, Bereich: b };
     this._daten.Projekte.push(projekt);
     this.speichern();
@@ -518,7 +554,9 @@ const Store = {
 
   importJson(jsonText) {
     this._pruefeGeladen();
-    this._daten = normalisiereDaten(JSON.parse(jsonText));
+    const parsed = JSON.parse(jsonText);
+    validiereImportDaten(parsed);
+    this._daten = normalisiereDaten(parsed);
     this.speichern();
   },
 };

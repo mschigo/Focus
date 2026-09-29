@@ -101,7 +101,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/store.js?v=3"></script>
+<script src="js/store.js?v=4"></script>
 <script>
 let ganttChart = null;
 
@@ -115,6 +115,8 @@ async function initGantt() {
     if (eingeloggt) {
       initalisiereFilter();
       rendereGantt();
+    } else {
+      window.location.replace("index.html");
     }
   });
 
@@ -122,6 +124,7 @@ async function initGantt() {
     await Store.starteAuthUeberwachung();
   } catch (err) {
     console.error("Fehler beim Start des Gantt Charts", err);
+    window.location.replace("index.html");
   }
 
   document.getElementById("filter-bereich").addEventListener("change", (e) => {
@@ -177,7 +180,10 @@ function aktualisiereProjektDropdown(bereich) {
   }
 
   projektSelect.innerHTML = `<option value="Alle">Alle Projekte</option>` +
-    projekte.map(p => `<option value="${escapeHtml(p.Name)}">${escapeHtml(p.Name)}</option>`).join("");
+    projekte.map(p => {
+      const label = bereich === "Alle" ? `${p.Name} (${p.Bereich})` : p.Name;
+      return `<option value="${escapeHtml(p.Id)}">${escapeHtml(label)}</option>`;
+    }).join("");
 
   if ([...projektSelect.options].some(o => o.value === alteAuswahl)) {
     projektSelect.value = alteAuswahl;
@@ -197,7 +203,7 @@ function holeGefilterteAufgaben() {
   }
 
   if (gewaehltesProjekt !== "Alle") {
-    aufgaben = aufgaben.filter(a => (a.ProjektName || "").toLowerCase() === gewaehltesProjekt.toLowerCase());
+    aufgaben = aufgaben.filter(a => a.ProjektId === gewaehltesProjekt);
   }
 
   return aufgaben;
@@ -311,7 +317,12 @@ function rendereGantt() {
 
     labels.push(titel);
     dataPoints.push([start, faellig]);
-    originalData.push({ start, faellig, titel, projekt: a.ProjektName });
+    originalData.push({
+      start,
+      faellig,
+      titel,
+      projekt: a.ProjektName ? `${a.ProjektName} (${a.Bereich})` : "Ohne Projekt"
+    });
 
     if (!minDate || start < minDate) minDate = start;
     if (!maxDate || faellig > maxDate) maxDate = faellig;

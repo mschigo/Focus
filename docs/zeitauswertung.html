@@ -49,7 +49,7 @@
           <option value="DieserMonat">📆 Dieser Monat</option>
           <option value="LetzterMonat">⏮️ Letzter Monat</option>
           <option value="DiesesJahr">📅 Dieses Jahr</option>
-
+          <option value="Benutzerdefiniert">✏️ Benutzerdefiniert</option>
         </select>
       </div>
 
@@ -111,7 +111,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/store.js?v=3"></script>
+<script src="js/store.js?v=4"></script>
 <script>
 let barChart = null;
 let pieChart = null;
@@ -121,6 +121,8 @@ async function initAuswertung() {
     if (eingeloggt) {
       initalisiereFilter();
       rendereAuswertung();
+    } else {
+      window.location.replace("index.html");
     }
   });
 
@@ -128,6 +130,7 @@ async function initAuswertung() {
     await Store.starteAuthUeberwachung();
   } catch (err) {
     console.error("Fehler beim Start der Auswertung", err);
+    window.location.replace("index.html");
   }
 
   // Event Listener für Bereich & Projekt
@@ -160,6 +163,8 @@ async function initAuswertung() {
 function setzeZeitraumPreset(preset) {
   const vonEl = document.getElementById("filter-von");
   const bisEl = document.getElementById("filter-bis");
+  if (preset === "Benutzerdefiniert") return;
+
   const heute = new Date();
 
   if (preset === "Alle") {
@@ -216,7 +221,10 @@ function aktualisiereProjektDropdown(bereich) {
   }
 
   projektSelect.innerHTML = `<option value="Alle">Alle Projekte</option>` +
-    projekte.map(p => `<option value="${escapeHtml(p.Name)}">${escapeHtml(p.Name)}</option>`).join("");
+    projekte.map(p => {
+      const label = bereich === "Alle" ? `${p.Name} (${p.Bereich})` : p.Name;
+      return `<option value="${escapeHtml(p.Id)}">${escapeHtml(label)}</option>`;
+    }).join("");
 
   if ([...projektSelect.options].some(o => o.value === alteAuswahl)) {
     projektSelect.value = alteAuswahl;
@@ -238,7 +246,7 @@ function holeAufgabenNachBereichProjekt() {
   }
 
   if (gewaehltesProjekt !== "Alle") {
-    aufgaben = aufgaben.filter(a => (a.ProjektName || "").toLowerCase() === gewaehltesProjekt.toLowerCase());
+    aufgaben = aufgaben.filter(a => a.ProjektId === gewaehltesProjekt);
   }
 
   return aufgaben;
@@ -272,7 +280,9 @@ function holeZeitbuchungenImZeitraum(aufgaben, vonDatum, bisDatum) {
       buchungen.push({
         ...z,
         Titel: a.Titel,
+        ProjektId: a.ProjektId,
         ProjektName: a.ProjektName || "Ohne Projekt",
+        Bereich: a.Bereich || "",
       });
     });
   });
@@ -296,25 +306,32 @@ function rendereAuswertung() {
   const gewaehlterBereich = document.getElementById("filter-bereich").value;
   const projekteInAuswahl = Store.getProjekte(gewaehlterBereich === "Alle" ? null : gewaehlterBereich);
   projekteInAuswahl.forEach(p => {
-    projektStats[p.Name] = { soll: 0, ist: 0 };
+    const label = gewaehlterBereich === "Alle" ? `${p.Name} (${p.Bereich})` : p.Name;
+    projektStats[p.Id] = { label, soll: 0, ist: 0 };
   });
 
   aufgabenImZeitraum.forEach(a => {
     const soll = parseFloat(a.SollZeit) || 0;
     totalSoll += soll;
 
-    const pName = a.ProjektName || "Ohne Projekt";
-    if (!projektStats[pName]) projektStats[pName] = { soll: 0, ist: 0 };
-    projektStats[pName].soll += soll;
+    const pKey = a.ProjektId || "ohne-projekt";
+    const label = a.ProjektName
+      ? (gewaehlterBereich === "Alle" ? `${a.ProjektName} (${a.Bereich})` : a.ProjektName)
+      : "Ohne Projekt";
+    if (!projektStats[pKey]) projektStats[pKey] = { label, soll: 0, ist: 0 };
+    projektStats[pKey].soll += soll;
   });
 
   buchungenImZeitraum.forEach(b => {
     const ist = parseFloat(b.Stunden) || 0;
     totalIst += ist;
 
-    const pName = b.ProjektName || "Ohne Projekt";
-    if (!projektStats[pName]) projektStats[pName] = { soll: 0, ist: 0 };
-    projektStats[pName].ist += ist;
+    const pKey = b.ProjektId || "ohne-projekt";
+    const label = b.ProjektName !== "Ohne Projekt"
+      ? (gewaehlterBereich === "Alle" ? `${b.ProjektName} (${b.Bereich})` : b.ProjektName)
+      : "Ohne Projekt";
+    if (!projektStats[pKey]) projektStats[pKey] = { label, soll: 0, ist: 0 };
+    projektStats[pKey].ist += ist;
   });
 
   const diff = totalIst - totalSoll;
@@ -333,9 +350,10 @@ function rendereAuswertung() {
 }
 
 function rendereBalkenDiagramm(projektStats) {
-  const labels = Object.keys(projektStats);
-  const sollData = labels.map(l => projektStats[l].soll);
-  const istData = labels.map(l => projektStats[l].ist);
+  const stats = Object.values(projektStats);
+  const labels = stats.map(s => s.label);
+  const sollData = stats.map(s => s.soll);
+  const istData = stats.map(s => s.ist);
 
   const ctx = document.getElementById("chart-projekte").getContext("2d");
   if (barChart) barChart.destroy();
@@ -358,8 +376,9 @@ function rendereBalkenDiagramm(projektStats) {
 }
 
 function rendereKuchenDiagramm(projektStats) {
-  const labels = Object.keys(projektStats);
-  const istData = labels.map(l => projektStats[l].ist);
+  const stats = Object.values(projektStats);
+  const labels = stats.map(s => s.label);
+  const istData = stats.map(s => s.ist);
 
   const ctx = document.getElementById("chart-verteilung").getContext("2d");
   if (pieChart) pieChart.destroy();
@@ -407,11 +426,14 @@ function rendereTabelle(buchungen) {
   `;
 
   sortiert.forEach(b => {
+    const projektAnzeige = b.ProjektName !== "Ohne Projekt" && b.Bereich
+      ? `${b.ProjektName} (${b.Bereich})`
+      : b.ProjektName;
     html += `
       <tr style="border-bottom: 1px solid var(--color-border, #eee);">
         <td style="padding: 8px;">${Anzeige.faelligkeitText(b.Datum)}</td>
         <td style="padding: 8px;">${escapeHtml(b.Titel)}</td>
-        <td style="padding: 8px; color: var(--color-text-muted);">${escapeHtml(b.ProjektName || "-")}</td>
+        <td style="padding: 8px; color: var(--color-text-muted);">${escapeHtml(projektAnzeige || "-")}</td>
         <td style="padding: 8px;">${(parseFloat(b.Stunden) || 0).toFixed(2)}h</td>
       </tr>
     `;
