@@ -153,6 +153,7 @@ const Aufgabenliste = {
 
         <div class="popup-footer" style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
           <button type="submit" class="btn-primary">💾 Speichern</button>
+          ${aufgabe.Status !== AufgabenStatus.Erledigt ? `<button type="button" id="edit-erledigt-btn" class="btn-success">✅ Erledigt</button>` : ""}
           <button type="button" id="edit-duplizieren-btn" class="btn-secondary">📄 Duplizieren</button>
           <button type="button" id="edit-abbrechen-btn" class="btn-secondary">✕ Abbrechen</button>
           <button type="button" id="edit-loeschen-btn" class="btn-danger">🗑️ Löschen</button>
@@ -242,6 +243,18 @@ const Aufgabenliste = {
     document.getElementById("edit-duplizieren-btn")?.addEventListener("click", () => {
       this._duplizieren(aufgabe);
       App.schliesseDetails();
+    });
+
+    // Erledigt: Status setzen und sofort speichern – ein Klick reicht.
+    document.getElementById("edit-erledigt-btn")?.addEventListener("click", () => {
+      const statusSelect = document.getElementById("edit-status");
+      if (statusSelect) statusSelect.value = AufgabenStatus.Erledigt;
+
+      if (sollInput) {
+        aktuellerSollWert = this._wertBerechnen(aktuellerSollWert, sollInput.value);
+      }
+
+      this._speichern(aufgabe.Id, aktuellerSollWert);
     });
 
     // Löschen

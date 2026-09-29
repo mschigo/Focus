@@ -622,7 +622,8 @@ main {
   /* Buttons & Chips insgesamt kompakter */
   .btn-primary,
   .btn-secondary,
-  .btn-danger {
+  .btn-danger,
+  .btn-success {
     padding: 7px 10px;
     font-size: 13px;
   }
@@ -822,6 +823,21 @@ select.form-input {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.btn-success {
+  background: var(--color-status-erledigt);
+  color: white;
+  border: 1px solid var(--color-status-erledigt);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-success:hover {
+  opacity: 0.9;
 }
 
 .btn-icon {
