@@ -51,7 +51,7 @@ function korrigiereDatumsreihenfolge(startdatum, faelligkeit) {
   const faellig = faelligkeit || null;
   return {
     Startdatum: start,
-    Faelligkeit: start && faellig && start > faellig ? start : faellig,
+    Faelligkeit: start && (!faellig || start > faellig) ? start : faellig,
   };
 }
 
