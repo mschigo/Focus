@@ -44,7 +44,8 @@
       <div class="filter-group">
         <label class="filter-group__label" for="filter-zeitraum-preset">Zeitraum</label>
         <select id="filter-zeitraum-preset" class="form-input" style="min-width: 150px;">
-          <option value="Alle" selected>♾️ Gesamter Zeitraum</option>
+          <option value="Heute" selected>📍 Heute</option>
+          <option value="Alle">♾️ Gesamter Zeitraum</option>
           <option value="DieseWoche">🗓️ Diese Woche</option>
           <option value="DieserMonat">📆 Dieser Monat</option>
           <option value="LetzterMonat">⏮️ Letzter Monat</option>
@@ -117,6 +118,9 @@ let barChart = null;
 let pieChart = null;
 
 async function initAuswertung() {
+  const zeitraumPreset = document.getElementById("filter-zeitraum-preset");
+  setzeZeitraumPreset(zeitraumPreset.value);
+
   Store.onAuthChange((eingeloggt) => {
     if (eingeloggt) {
       initalisiereFilter();
@@ -173,12 +177,16 @@ function setzeZeitraumPreset(preset) {
     return;
   }
 
-  let von = new Date();
-  let bis = new Date();
+  let von = new Date(heute);
+  let bis = new Date(heute);
 
-  if (preset === "DieseWoche") {
+  if (preset === "Heute") {
+    von = new Date(heute);
+    bis = new Date(heute);
+  } else if (preset === "DieseWoche") {
     const day = heute.getDay() || 7;
     von.setDate(heute.getDate() - day + 1);
+    bis = new Date(von);
     bis.setDate(von.getDate() + 6);
   } else if (preset === "DieserMonat") {
     von = new Date(heute.getFullYear(), heute.getMonth(), 1);
