@@ -8,9 +8,13 @@ const Dashboard = {
   ausgewaehltesProjekt: "Alle",
   ausgewaehlterAnsichtsFilter: "Alle",
   suchBegriff: "",
+  _checklisteAufgabeId: null,
+  _checklisteEntwurf: [],
+  _checklisteAusloeserId: null,
 
   init() {
     document.addEventListener("focus:datenGeaendert", () => this.render());
+    this._wireChecklistePopup();
 
     const ansichtSelect = document.getElementById("dashboard-ansicht-filter");
     if (ansichtSelect) {
@@ -26,6 +30,87 @@ const Dashboard = {
     }
 
     this.render();
+  },
+
+  _wireChecklistePopup() {
+    const popup = document.getElementById("checkliste-popup");
+    document.getElementById("checkliste-popup-close")?.addEventListener("click", () => this._schliesseChecklistePopup());
+    document.getElementById("checkliste-popup-abbrechen")?.addEventListener("click", () => this._schliesseChecklistePopup());
+    document.getElementById("checkliste-popup-speichern")?.addEventListener("click", () => this._speichereChecklistePopup());
+
+    popup?.addEventListener("click", (e) => {
+      if (e.target === popup) this._schliesseChecklistePopup();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && popup && !popup.hidden) {
+        e.preventDefault();
+        this._schliesseChecklistePopup();
+      }
+    });
+  },
+
+  _oeffneChecklistePopup(aufgabe, ausloeser) {
+    const popup = document.getElementById("checkliste-popup");
+    const titel = document.getElementById("checkliste-popup-titel");
+    const liste = document.getElementById("checkliste-popup-liste");
+    if (!popup || !titel || !liste || !aufgabe.Checkliste?.length) return;
+
+    this._checklisteAufgabeId = aufgabe.Id;
+    this._checklisteAusloeserId = ausloeser?.id || null;
+    this._checklisteEntwurf = aufgabe.Checkliste.map(
+      (punkt) => Boolean(punkt.IstErledigt || punkt.Erledigt || punkt.erledigt)
+    );
+
+    titel.textContent = `☑ ${aufgabe.Titel}`;
+    liste.innerHTML = aufgabe.Checkliste
+      .map((punkt, index) => {
+        const text = punkt.Titel || punkt.Text || punkt.text || "";
+        return `
+          <label class="checkliste-schnell-punkt">
+            <input type="checkbox" data-index="${index}" ${this._checklisteEntwurf[index] ? "checked" : ""} />
+            <span>${escapeHtml(text)}</span>
+          </label>`;
+      })
+      .join("");
+
+    liste.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        this._checklisteEntwurf[Number(checkbox.dataset.index)] = checkbox.checked;
+      });
+    });
+
+    popup.hidden = false;
+    liste.querySelector('input[type="checkbox"]')?.focus();
+  },
+
+  _schliesseChecklistePopup(fokusWiederherstellen = true) {
+    const popup = document.getElementById("checkliste-popup");
+    if (!popup || popup.hidden) return;
+
+    const ausloeserId = this._checklisteAusloeserId;
+    popup.hidden = true;
+    this._checklisteAufgabeId = null;
+    this._checklisteEntwurf = [];
+    this._checklisteAusloeserId = null;
+
+    if (fokusWiederherstellen && ausloeserId) {
+      document.getElementById(ausloeserId)?.focus();
+    }
+  },
+
+  _speichereChecklistePopup() {
+    if (!this._checklisteAufgabeId) return;
+    const aufgabeId = this._checklisteAufgabeId;
+    const ausloeserId = this._checklisteAusloeserId;
+
+    try {
+      Store.setChecklisteStatus(aufgabeId, [...this._checklisteEntwurf]);
+      this._schliesseChecklistePopup(false);
+      setTimeout(() => document.getElementById(ausloeserId)?.focus(), 0);
+    } catch (err) {
+      Anzeige.zeigeToast(err.message, true);
+    }
   },
 
   setAnsichtsFilter(filter) {
@@ -258,7 +343,7 @@ const Dashboard = {
     let checklisteHtml = "";
     if (anzahlGesamt > 0) {
       const anzahlErledigt = checkliste.filter((p) => p.IstErledigt || p.Erledigt || p.erledigt).length;
-      checklisteHtml = ` <span class="checkliste-progress-badge" title="Checkliste: ${anzahlErledigt} von ${anzahlGesamt} erledigt">☑ ${anzahlErledigt}/${anzahlGesamt}</span>`;
+      checklisteHtml = ` <button type="button" id="checkliste-${escapeHtml(aufgabe.Id)}" class="checkliste-progress-badge checkliste-schnell-btn" aria-label="Checkliste für ${escapeHtml(aufgabe.Titel)} öffnen: ${anzahlErledigt} von ${anzahlGesamt} erledigt" title="Checkliste öffnen">☑ ${anzahlErledigt}/${anzahlGesamt}</button>`;
     }
 
     // 2. Zeiterfassungs-Badge
@@ -299,6 +384,12 @@ const Dashboard = {
 
     // Click auf Zeilen-Inhalt öffnet Popup
     row.querySelector(".aufgabe-row__main")?.addEventListener("click", () => App.oeffneDetails(aufgabe.Id));
+
+    row.querySelector(".checkliste-schnell-btn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._oeffneChecklistePopup(aufgabe, e.currentTarget);
+    });
 
     // Inline-Klick auf den Status-Dot wechselt den Status zyklisch
     row.querySelector(".status-dot")?.addEventListener("click", (e) => {

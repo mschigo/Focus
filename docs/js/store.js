@@ -409,6 +409,26 @@ const Store = {
     this.setAufgabenStatus(id, status);
   },
 
+  setChecklisteStatus(id, erledigtZustaende) {
+    this._pruefeGeladen();
+    const aufgabe = this._daten.Aufgaben.find((a) => a.Id === id);
+    if (!aufgabe) throw new Error("Aufgabe wurde nicht gefunden.");
+
+    const checkliste = Array.isArray(aufgabe.Checkliste) ? aufgabe.Checkliste : [];
+    if (!Array.isArray(erledigtZustaende) || erledigtZustaende.length !== checkliste.length) {
+      throw new Error("Die Checkliste wurde zwischenzeitlich geändert. Bitte erneut öffnen.");
+    }
+
+    aufgabe.Checkliste = checkliste.map((punkt, index) => {
+      const aktualisiert = { ...punkt, IstErledigt: Boolean(erledigtZustaende[index]) };
+      delete aktualisiert.Erledigt;
+      delete aktualisiert.erledigt;
+      return aktualisiert;
+    });
+    aufgabe.GeaendertAm = nowIso();
+    this.speichern();
+  },
+
   endgueltigLoeschen(id) {
     this._pruefeGeladen();
     this._daten.Aufgaben = this._daten.Aufgaben.filter((a) => a.Id !== id);

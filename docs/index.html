@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Focus – Aufgabenverwaltung</title>
 <meta name="description" content="Persönliche Aufgabenverwaltung mit Dashboard, Bereichen und Projekten." />
-<link rel="stylesheet" href="style.css?v=5" />
+<link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
 
@@ -221,6 +221,23 @@
   </div>
 </div>
 
+<!-- Popup: Checkliste direkt im Dashboard bearbeiten -->
+<div id="checkliste-popup" class="popup-overlay" hidden>
+  <div class="popup popup--kompakt" role="dialog" aria-modal="true" aria-labelledby="checkliste-popup-titel">
+    <header class="popup__header">
+      <h2 id="checkliste-popup-titel">☑ Checkliste</h2>
+      <button type="button" class="icon-btn" id="checkliste-popup-close" aria-label="Checkliste schließen">✕</button>
+    </header>
+    <div class="popup__body">
+      <div id="checkliste-popup-liste" class="checkliste-schnell-liste"></div>
+      <div class="popup-footer">
+        <button type="button" id="checkliste-popup-speichern" class="btn-primary">💾 Speichern</button>
+        <button type="button" id="checkliste-popup-abbrechen" class="btn-secondary">✕ Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Popup: Neue Aufgabe -->
 <div id="neue-aufgabe-popup" class="popup-overlay" hidden>
   <div class="popup">
@@ -310,8 +327,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/store.js?v=7"></script>
-<script src="js/dashboard.js?v=2"></script>
+<script src="js/store.js?v=8"></script>
+<script src="js/dashboard.js?v=3"></script>
 <script src="js/aufgabenliste.js?v=5"></script>
 <script src="js/einstellungen.js?v=2"></script>
 <script src="js/app.js?v=3"></script>
