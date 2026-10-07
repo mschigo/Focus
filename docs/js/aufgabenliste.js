@@ -368,6 +368,7 @@ const Aufgabenliste = {
   },
 
   _speichern(aufgabeId, sollZeit, schliessenNachSpeichern = true) {
+    const vorherigerStatus = Store.getAufgaben().find((a) => a.Id === aufgabeId)?.Status;
     const titel = document.getElementById("edit-titel")?.value.trim();
     if (!titel) {
       if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Titel ist erforderlich.", true);
@@ -385,6 +386,7 @@ const Aufgabenliste = {
 
     const finalStart = document.getElementById("edit-startdatum")?.value || null;
     const finalFaellig = document.getElementById("edit-faelligkeit")?.value || null;
+    const neuerStatus = document.getElementById("edit-status")?.value || AufgabenStatus.Offen;
 
     try {
       Store.addOrUpdateAufgabe({
@@ -392,7 +394,7 @@ const Aufgabenliste = {
         Titel: titel,
         ProjektId: projektId,
         Prioritaet: prioritaet,
-        Status: document.getElementById("edit-status")?.value || AufgabenStatus.Offen,
+        Status: neuerStatus,
         Startdatum: finalStart,
         Faelligkeit: finalFaellig,
         SollZeit: parseFloat(sollZeit) || 0,
@@ -402,7 +404,21 @@ const Aufgabenliste = {
         Checkliste: this._checklisteEntwurf,
       });
 
-      if (typeof Anzeige !== "undefined") Anzeige.zeigeToast("Aufgabe gespeichert.");
+      if (typeof Anzeige !== "undefined") {
+        if (vorherigerStatus && vorherigerStatus !== AufgabenStatus.Erledigt &&
+            neuerStatus === AufgabenStatus.Erledigt) {
+          Anzeige.zeigeToast("Aufgabe erledigt.", false, {
+            text: "Zurück",
+            dauer: 5000,
+            ausfuehren: () => {
+              Store.setAufgabeStatus(aufgabeId, vorherigerStatus);
+              Anzeige.zeigeToast("Erledigung zurückgenommen.");
+            },
+          });
+        } else {
+          Anzeige.zeigeToast("Aufgabe gespeichert.");
+        }
+      }
       if (schliessenNachSpeichern) {
         App.schliesseDetails();
       }

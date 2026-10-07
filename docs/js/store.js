@@ -638,14 +638,32 @@ const Anzeige = {
     return `${tag}.${monat}.${jahr}`;
   },
 
-  zeigeToast(nachricht, istFehler = false) {
+  zeigeToast(nachricht, istFehler = false, aktion = null) {
     const el = document.getElementById("toast");
     if (!el) return;
-    el.textContent = nachricht;
+
+    el.replaceChildren();
+    const text = document.createElement("span");
+    text.textContent = nachricht;
+    el.appendChild(text);
+
+    if (aktion) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "toast__aktion";
+      button.textContent = aktion.text;
+      button.addEventListener("click", () => {
+        clearTimeout(this._toastTimer);
+        el.hidden = true;
+        aktion.ausfuehren();
+      }, { once: true });
+      el.appendChild(button);
+    }
+
     el.classList.toggle("is-error", istFehler);
     el.hidden = false;
     clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => { el.hidden = true; }, 3000);
+    this._toastTimer = setTimeout(() => { el.hidden = true; }, aktion?.dauer ?? 3000);
   },
 };
 

@@ -410,7 +410,19 @@ const Dashboard = {
       neuerStatus = AufgabenStatus.Offen;
     }
 
+    const vorherigerStatus = aufgabe.Status;
     Store.setAufgabeStatus(aufgabe.Id, neuerStatus);
+
+    if (neuerStatus === AufgabenStatus.Erledigt) {
+      Anzeige.zeigeToast("Aufgabe erledigt.", false, {
+        text: "Zurück",
+        dauer: 5000,
+        ausfuehren: () => {
+          Store.setAufgabeStatus(aufgabe.Id, vorherigerStatus);
+          Anzeige.zeigeToast("Erledigung zurückgenommen.");
+        },
+      });
+    }
   },
 };
 
