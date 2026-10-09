@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Focus – Aufgabenverwaltung</title>
 <meta name="description" content="Persönliche Aufgabenverwaltung mit Dashboard, Bereichen und Projekten." />
-<link rel="stylesheet" href="style.css?v=7" />
+<link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
 
@@ -194,7 +194,11 @@
         <div class="form-row">
           <div class="form-field">
             <label for="einst-email-summary-uhrzeit">Uhrzeit</label>
-            <input type="time" id="einst-email-summary-uhrzeit" class="form-input" value="07:00" />
+            <input type="text" id="einst-email-summary-uhrzeit" class="form-input"
+                   value="07:00" inputmode="numeric" maxlength="5"
+                   pattern="(?:[01]\d|2[0-3]):[0-5]\d"
+                   placeholder="HH:MM" aria-describedby="einst-email-summary-uhrzeit-hinweis" />
+            <small id="einst-email-summary-uhrzeit-hinweis" class="form-hinweis">24-Stunden-Format, z. B. 07:30 oder 18:00</small>
           </div>
           <div class="form-field">
             <label for="einst-email-summary-zeitzone">Zeitzone</label>
@@ -366,7 +370,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/store.js?v=11"></script>
+<script src="js/store.js?v=12"></script>
 <script src="js/dashboard.js?v=4"></script>
 <script src="js/aufgabenliste.js?v=6"></script>
 <script src="js/einstellungen.js?v=4"></script>

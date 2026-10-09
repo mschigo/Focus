@@ -362,7 +362,17 @@ const Store = {
     const { data, error } = await supabaseClient.functions.invoke("send-daily-task-summary", {
       body: { test: true },
     });
-    if (error) throw new Error("Testmail konnte nicht angefordert werden: " + error.message);
+    if (error) {
+      let details = "";
+      try {
+        const response = error.context?.clone?.();
+        const fehlerAntwort = response ? await response.json() : null;
+        details = fehlerAntwort?.error || fehlerAntwort?.message || "";
+      } catch {
+        details = "";
+      }
+      throw new Error("Testmail konnte nicht angefordert werden: " + (details || error.message));
+    }
     if (Array.isArray(data?.fehler) && data.fehler.length > 0) {
       throw new Error("Testmail fehlgeschlagen: " + data.fehler[0].replace(/^[^:]+:\s*/, ""));
     }
