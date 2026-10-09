@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Focus – Aufgabenverwaltung</title>
 <meta name="description" content="Persönliche Aufgabenverwaltung mit Dashboard, Bereichen und Projekten." />
-<link rel="stylesheet" href="style.css?v=8" />
+<link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
 
@@ -193,12 +193,13 @@
         </div>
         <div class="form-row">
           <div class="form-field">
-            <label for="einst-email-summary-uhrzeit">Uhrzeit</label>
-            <input type="text" id="einst-email-summary-uhrzeit" class="form-input"
-                   value="07:00" inputmode="numeric" maxlength="5"
-                   pattern="(?:[01]\d|2[0-3]):[0-5]\d"
-                   placeholder="HH:MM" aria-describedby="einst-email-summary-uhrzeit-hinweis" />
-            <small id="einst-email-summary-uhrzeit-hinweis" class="form-hinweis">24-Stunden-Format, z. B. 07:30 oder 18:00</small>
+            <label id="einst-email-summary-uhrzeit-label">Uhrzeit</label>
+            <div class="time-picker-24h" role="group" aria-labelledby="einst-email-summary-uhrzeit-label">
+              <select id="einst-email-summary-stunde" class="form-input" aria-label="Stunde"></select>
+              <span aria-hidden="true">:</span>
+              <select id="einst-email-summary-minute" class="form-input" aria-label="Minute"></select>
+            </div>
+            <small class="form-hinweis">24-Stunden-Format</small>
           </div>
           <div class="form-field">
             <label for="einst-email-summary-zeitzone">Zeitzone</label>
@@ -373,7 +374,7 @@
 <script src="js/store.js?v=12"></script>
 <script src="js/dashboard.js?v=4"></script>
 <script src="js/aufgabenliste.js?v=6"></script>
-<script src="js/einstellungen.js?v=4"></script>
+<script src="js/einstellungen.js?v=5"></script>
 <script src="js/app.js?v=3"></script>
 </body>
 </html>

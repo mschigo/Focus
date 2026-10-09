@@ -293,13 +293,14 @@ const Einstellungen = {
     const speichern = document.getElementById("einst-email-summary-speichern");
     const testen = document.getElementById("einst-email-summary-testen");
 
+    this._initialisiereZeitPicker();
     aktiv.addEventListener("change", () => this._aktualisiereEmailFeldStatus());
     speichern.addEventListener("click", () => {
       try {
         Store.setEmailZusammenfassung({
           Aktiv: aktiv.checked,
           Empfaenger: document.getElementById("einst-email-summary-empfaenger").value.trim(),
-          Uhrzeit: document.getElementById("einst-email-summary-uhrzeit").value,
+          Uhrzeit: this._leseZeitPicker(),
           Zeitzone: document.getElementById("einst-email-summary-zeitzone").value,
           AmWochenende: document.getElementById("einst-email-summary-wochenende").checked,
         });
@@ -318,7 +319,7 @@ const Einstellungen = {
         const gespeichert = await Store.setEmailZusammenfassung({
           Aktiv: aktiv.checked,
           Empfaenger: document.getElementById("einst-email-summary-empfaenger").value.trim(),
-          Uhrzeit: document.getElementById("einst-email-summary-uhrzeit").value,
+          Uhrzeit: this._leseZeitPicker(),
           Zeitzone: document.getElementById("einst-email-summary-zeitzone").value,
           AmWochenende: document.getElementById("einst-email-summary-wochenende").checked,
         });
@@ -338,7 +339,9 @@ const Einstellungen = {
     const einstellungen = Store.getEmailZusammenfassung();
     document.getElementById("einst-email-summary-aktiv").checked = einstellungen.Aktiv;
     document.getElementById("einst-email-summary-empfaenger").value = einstellungen.Empfaenger;
-    document.getElementById("einst-email-summary-uhrzeit").value = einstellungen.Uhrzeit;
+    const [stunde = "07", minute = "00"] = einstellungen.Uhrzeit.split(":");
+    document.getElementById("einst-email-summary-stunde").value = stunde;
+    document.getElementById("einst-email-summary-minute").value = minute;
     document.getElementById("einst-email-summary-zeitzone").value = einstellungen.Zeitzone;
     document.getElementById("einst-email-summary-wochenende").checked = einstellungen.AmWochenende;
     this._aktualisiereEmailFeldStatus();
@@ -348,13 +351,37 @@ const Einstellungen = {
     const deaktiviert = !document.getElementById("einst-email-summary-aktiv").checked;
     [
       "einst-email-summary-empfaenger",
-      "einst-email-summary-uhrzeit",
+      "einst-email-summary-stunde",
+      "einst-email-summary-minute",
       "einst-email-summary-zeitzone",
       "einst-email-summary-wochenende",
       "einst-email-summary-testen",
     ].forEach((id) => {
       document.getElementById(id).disabled = deaktiviert;
     });
+  },
+
+  _initialisiereZeitPicker() {
+    const stunden = document.getElementById("einst-email-summary-stunde");
+    const minuten = document.getElementById("einst-email-summary-minute");
+    if (stunden.options.length === 0) {
+      for (let stunde = 0; stunde < 24; stunde += 1) {
+        const wert = String(stunde).padStart(2, "0");
+        stunden.add(new Option(wert, wert));
+      }
+    }
+    if (minuten.options.length === 0) {
+      for (let minute = 0; minute < 60; minute += 1) {
+        const wert = String(minute).padStart(2, "0");
+        minuten.add(new Option(wert, wert));
+      }
+    }
+  },
+
+  _leseZeitPicker() {
+    const stunde = document.getElementById("einst-email-summary-stunde").value;
+    const minute = document.getElementById("einst-email-summary-minute").value;
+    return `${stunde}:${minute}`;
   },
 
   // ---------------------------------------------------------------

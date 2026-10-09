@@ -182,6 +182,24 @@ main {
   font-size: 12px;
 }
 
+.time-picker-24h {
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) auto minmax(72px, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.time-picker-24h > span {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.time-picker-24h .form-input {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
