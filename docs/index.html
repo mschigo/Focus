@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Focus – Aufgabenverwaltung</title>
 <meta name="description" content="Persönliche Aufgabenverwaltung mit Dashboard, Bereichen und Projekten." />
-<link rel="stylesheet" href="style.css?v=6" />
+<link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
 
@@ -178,6 +178,45 @@
       </div>
 
       <div class="card">
+        <h2 class="card-title">✉️ Tägliche E-Mail-Zusammenfassung</h2>
+        <p class="card-hinweis">
+          Sendet dir zur gewählten Uhrzeit eine Übersicht über überfällige, heutige und demnächst anstehende Aufgaben.
+        </p>
+        <label class="checkbox-row" for="einst-email-summary-aktiv">
+          <input type="checkbox" id="einst-email-summary-aktiv" />
+          <span>Tägliche Zusammenfassung aktivieren</span>
+        </label>
+        <div class="form-field">
+          <label for="einst-email-summary-empfaenger">Empfängeradresse</label>
+          <input type="email" id="einst-email-summary-empfaenger" class="form-input"
+                 autocomplete="email" placeholder="name@zege.ch" />
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="einst-email-summary-uhrzeit">Uhrzeit</label>
+            <input type="time" id="einst-email-summary-uhrzeit" class="form-input" value="07:00" />
+          </div>
+          <div class="form-field">
+            <label for="einst-email-summary-zeitzone">Zeitzone</label>
+            <select id="einst-email-summary-zeitzone" class="form-input">
+              <option value="Europe/Zurich">Zürich (Schweiz)</option>
+              <option value="Europe/Vienna">Wien (Österreich)</option>
+              <option value="Europe/Berlin">Berlin (Deutschland)</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+        </div>
+        <label class="checkbox-row" for="einst-email-summary-wochenende">
+          <input type="checkbox" id="einst-email-summary-wochenende" />
+          <span>Auch am Samstag und Sonntag senden</span>
+        </label>
+        <div class="btn-row">
+          <button type="button" id="einst-email-summary-speichern" class="btn-primary">💾 E-Mail-Einstellungen speichern</button>
+          <button type="button" id="einst-email-summary-testen" class="btn-secondary">✉️ Test-E-Mail senden</button>
+        </div>
+      </div>
+
+      <div class="card">
         <h2 class="card-title">🧹 Aufgaben aufräumen</h2>
         <p style="font-size: 13px; color: var(--color-text-muted); margin-top: -6px;">
           Entfernt alle als erledigt markierten Aufgaben endgültig aus der Liste.
@@ -327,10 +366,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-config.js"></script>
-<script src="js/store.js?v=9"></script>
+<script src="js/store.js?v=11"></script>
 <script src="js/dashboard.js?v=4"></script>
 <script src="js/aufgabenliste.js?v=6"></script>
-<script src="js/einstellungen.js?v=2"></script>
+<script src="js/einstellungen.js?v=4"></script>
 <script src="js/app.js?v=3"></script>
 </body>
 </html>

@@ -169,6 +169,32 @@ main {
   color: var(--color-text-muted);
 }
 
+.card-hinweis {
+  margin-top: -6px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 8px 0 14px;
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+}
+
+.checkbox-row:has(input:disabled) {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /* ---------- Filter ---------- */
 
 .filter-row {

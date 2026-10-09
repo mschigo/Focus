@@ -32,6 +32,7 @@ const Einstellungen = {
     this._wireBereiche();
     this._wireProjekte();
     this._wireFarben();
+    this._wireEmailZusammenfassung();
     this._wireAufgabenAufraeumen();
     this._wireDaten();
     this.render();
@@ -43,6 +44,7 @@ const Einstellungen = {
     this._renderProjektSelect();
     this._renderFarbOptionen();
     this._renderDarkModeOptionen();
+    this._renderEmailZusammenfassung();
   },
 
   // ---------------------------------------------------------------
@@ -280,6 +282,79 @@ const Einstellungen = {
       });
       container.appendChild(btn);
     }
+  },
+
+  // ---------------------------------------------------------------
+  // Tägliche E-Mail-Zusammenfassung (kontoweise)
+  // ---------------------------------------------------------------
+
+  _wireEmailZusammenfassung() {
+    const aktiv = document.getElementById("einst-email-summary-aktiv");
+    const speichern = document.getElementById("einst-email-summary-speichern");
+    const testen = document.getElementById("einst-email-summary-testen");
+
+    aktiv.addEventListener("change", () => this._aktualisiereEmailFeldStatus());
+    speichern.addEventListener("click", () => {
+      try {
+        Store.setEmailZusammenfassung({
+          Aktiv: aktiv.checked,
+          Empfaenger: document.getElementById("einst-email-summary-empfaenger").value.trim(),
+          Uhrzeit: document.getElementById("einst-email-summary-uhrzeit").value,
+          Zeitzone: document.getElementById("einst-email-summary-zeitzone").value,
+          AmWochenende: document.getElementById("einst-email-summary-wochenende").checked,
+        });
+        Anzeige.zeigeToast(
+          aktiv.checked ? "Tägliche Zusammenfassung gespeichert." : "Tägliche Zusammenfassung deaktiviert.",
+        );
+      } catch (err) {
+        Anzeige.zeigeToast(err.message, true);
+      }
+    });
+    testen.addEventListener("click", async () => {
+      const beschriftung = testen.textContent;
+      testen.disabled = true;
+      testen.textContent = "Wird gesendet…";
+      try {
+        const gespeichert = await Store.setEmailZusammenfassung({
+          Aktiv: aktiv.checked,
+          Empfaenger: document.getElementById("einst-email-summary-empfaenger").value.trim(),
+          Uhrzeit: document.getElementById("einst-email-summary-uhrzeit").value,
+          Zeitzone: document.getElementById("einst-email-summary-zeitzone").value,
+          AmWochenende: document.getElementById("einst-email-summary-wochenende").checked,
+        });
+        if (!gespeichert) throw new Error("Einstellungen konnten nicht gespeichert werden.");
+        await Store.sendeEmailZusammenfassungTest();
+        Anzeige.zeigeToast("Test-E-Mail wurde versendet.");
+      } catch (err) {
+        Anzeige.zeigeToast(err.message, true);
+      } finally {
+        testen.disabled = false;
+        testen.textContent = beschriftung;
+      }
+    });
+  },
+
+  _renderEmailZusammenfassung() {
+    const einstellungen = Store.getEmailZusammenfassung();
+    document.getElementById("einst-email-summary-aktiv").checked = einstellungen.Aktiv;
+    document.getElementById("einst-email-summary-empfaenger").value = einstellungen.Empfaenger;
+    document.getElementById("einst-email-summary-uhrzeit").value = einstellungen.Uhrzeit;
+    document.getElementById("einst-email-summary-zeitzone").value = einstellungen.Zeitzone;
+    document.getElementById("einst-email-summary-wochenende").checked = einstellungen.AmWochenende;
+    this._aktualisiereEmailFeldStatus();
+  },
+
+  _aktualisiereEmailFeldStatus() {
+    const deaktiviert = !document.getElementById("einst-email-summary-aktiv").checked;
+    [
+      "einst-email-summary-empfaenger",
+      "einst-email-summary-uhrzeit",
+      "einst-email-summary-zeitzone",
+      "einst-email-summary-wochenende",
+      "einst-email-summary-testen",
+    ].forEach((id) => {
+      document.getElementById(id).disabled = deaktiviert;
+    });
   },
 
   // ---------------------------------------------------------------

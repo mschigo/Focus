@@ -68,6 +68,19 @@ function wochenEndeIso(heute) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function normalisiereEmailZusammenfassung(einstellungen, standardEmail = "") {
+  const wert = einstellungen && typeof einstellungen === "object" && !Array.isArray(einstellungen)
+    ? einstellungen
+    : {};
+  return {
+    Aktiv: wert.Aktiv === true,
+    Empfaenger: typeof wert.Empfaenger === "string" ? wert.Empfaenger.trim() : standardEmail,
+    Uhrzeit: /^\d{2}:\d{2}$/.test(wert.Uhrzeit || "") ? wert.Uhrzeit : "07:00",
+    Zeitzone: typeof wert.Zeitzone === "string" && wert.Zeitzone ? wert.Zeitzone : "Europe/Zurich",
+    AmWochenende: wert.AmWochenende === true,
+  };
+}
+
 // Erkennt, ob ein Link/Pfad auf eine lokale Datei zeigt (statt auf eine Web-URL).
 function istDateiPfad(text) {
   if (!text) return false;
@@ -115,6 +128,7 @@ function normalisiereDaten(parsed) {
     Konfiguration: {
       Bereiche: Array.isArray(parsed?.Konfiguration?.Bereiche) ? parsed.Konfiguration.Bereiche : [],
       BereichFarben: bereichFarben && typeof bereichFarben === "object" ? bereichFarben : {},
+      EmailZusammenfassung: normalisiereEmailZusammenfassung(parsed?.Konfiguration?.EmailZusammenfassung),
     },
   };
 }
@@ -140,6 +154,7 @@ function validiereImportDaten(parsed) {
 const Store = {
   _daten: null,
   _userId: null,
+  _userEmail: "",
   _authCallbacks: [],
 
   onAuthChange(callback) {
@@ -157,7 +172,7 @@ const Store = {
     if (error) console.error("Focus: Fehler beim Prüfen der Sitzung.", error);
 
     if (data?.session) {
-      await this._ladeFuerNutzer(data.session.user.id);
+      await this._ladeFuerNutzer(data.session.user.id, data.session.user.email);
       this._notifyAuthChange(true);
     } else {
       this._notifyAuthChange(false);
@@ -166,7 +181,7 @@ const Store = {
     supabaseClient.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         try {
-          await this._ladeFuerNutzer(session.user.id);
+          await this._ladeFuerNutzer(session.user.id, session.user.email);
           this._notifyAuthChange(true);
         } catch (err) {
           console.error("Focus: Fehler beim Laden nach Login.", err);
@@ -177,6 +192,7 @@ const Store = {
       } else {
         this._daten = null;
         this._userId = null;
+        this._userEmail = "";
         this._notifyAuthChange(false);
       }
     });
@@ -196,8 +212,9 @@ const Store = {
     await supabaseClient.auth.signOut();
   },
 
-  async _ladeFuerNutzer(userId) {
+  async _ladeFuerNutzer(userId, userEmail = "") {
     this._userId = userId;
+    this._userEmail = userEmail || "";
 
     const { data, error } = await supabaseClient
       .from("focus_daten")
@@ -209,17 +226,29 @@ const Store = {
 
     if (data && data.daten) {
       this._daten = normalisiereDaten(data.daten);
+      if (!this._daten.Konfiguration.EmailZusammenfassung.Empfaenger) {
+        this._daten.Konfiguration.EmailZusammenfassung.Empfaenger = this._userEmail;
+      }
       this._migriereLokaleBereichFarben();
       return;
     }
 
-    this._daten = { Aufgaben: [], Projekte: [], Konfiguration: { Bereiche: ["Arbeit", "Privat"], BereichFarben: {} } };
+    this._daten = {
+      Aufgaben: [],
+      Projekte: [],
+      Konfiguration: {
+        Bereiche: ["Arbeit", "Privat"],
+        BereichFarben: {},
+        EmailZusammenfassung: normalisiereEmailZusammenfassung(null, this._userEmail),
+      },
+    };
     const { error: insertError } = await supabaseClient
       .from("focus_daten")
       .insert({ user_id: userId, daten: this._daten });
     if (insertError) {
       this._daten = null;
       this._userId = null;
+      this._userEmail = "";
       throw new Error("Nutzerdaten konnten nicht angelegt werden: " + insertError.message);
     }
     this._migriereLokaleBereichFarben();
@@ -243,7 +272,7 @@ const Store = {
 
   speichern() {
     document.dispatchEvent(new CustomEvent("focus:datenGeaendert"));
-    this._persistiereImHintergrund();
+    return this._persistiereImHintergrund();
   },
 
   async _persistiereImHintergrund() {
@@ -257,6 +286,7 @@ const Store = {
     if (error && typeof Anzeige !== "undefined") {
       Anzeige.zeigeToast("Speichern fehlgeschlagen: " + error.message, true);
     }
+    return !error;
   },
 
   _pruefeGeladen() {
@@ -291,6 +321,54 @@ const Store = {
         IstZeit: Math.round(istZeit * 100) / 100,
       };
     });
+  },
+
+  getEmailZusammenfassung() {
+    this._pruefeGeladen();
+    return {
+      ...normalisiereEmailZusammenfassung(
+        this._daten.Konfiguration.EmailZusammenfassung,
+        this._userEmail,
+      ),
+    };
+  },
+
+  setEmailZusammenfassung(einstellungen) {
+    this._pruefeGeladen();
+    const normalisiert = normalisiereEmailZusammenfassung(einstellungen, this._userEmail);
+    const emailGueltig = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalisiert.Empfaenger);
+    if (normalisiert.Aktiv && !emailGueltig) {
+      throw new Error("Für die aktive Zusammenfassung ist eine gültige E-Mail-Adresse erforderlich.");
+    }
+    if (normalisiert.Empfaenger && !emailGueltig) {
+      throw new Error("Bitte eine gültige E-Mail-Adresse eingeben.");
+    }
+
+    const [stunde, minute] = normalisiert.Uhrzeit.split(":").map(Number);
+    if (stunde < 0 || stunde > 23 || minute < 0 || minute > 59) {
+      throw new Error("Bitte eine gültige Uhrzeit eingeben.");
+    }
+    try {
+      new Intl.DateTimeFormat("de-CH", { timeZone: normalisiert.Zeitzone }).format(new Date());
+    } catch {
+      throw new Error("Bitte eine gültige Zeitzone auswählen.");
+    }
+
+    this._daten.Konfiguration.EmailZusammenfassung = normalisiert;
+    return this.speichern();
+  },
+
+  async sendeEmailZusammenfassungTest() {
+    const { data, error } = await supabaseClient.functions.invoke("send-daily-task-summary", {
+      body: { test: true },
+    });
+    if (error) throw new Error("Testmail konnte nicht angefordert werden: " + error.message);
+    if (Array.isArray(data?.fehler) && data.fehler.length > 0) {
+      throw new Error("Testmail fehlgeschlagen: " + data.fehler[0].replace(/^[^:]+:\s*/, ""));
+    }
+    if (data?.gesendet !== 1) {
+      throw new Error("Die Testmail wurde nicht versendet. Bitte Einstellungen und Function-Logs prüfen.");
+    }
   },
 
   getBereichFarbe(bereichName) {
