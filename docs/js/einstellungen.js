@@ -32,6 +32,7 @@ const Einstellungen = {
     this._wireBereiche();
     this._wireProjekte();
     this._wireFarben();
+    this._wireDarstellung();
     this._wireEmailZusammenfassung();
     this._wireAufgabenAufraeumen();
     this._wireDaten();
@@ -44,6 +45,7 @@ const Einstellungen = {
     this._renderProjektSelect();
     this._renderFarbOptionen();
     this._renderDarkModeOptionen();
+    this._renderErfolgsanimation();
     this._renderEmailZusammenfassung();
   },
 
@@ -260,6 +262,15 @@ const Einstellungen = {
   // Darstellung (Dark Mode, geräteweise)
   // ---------------------------------------------------------------
 
+  _wireDarstellung() {
+    document.getElementById("einst-erfolgsanimation")?.addEventListener("change", (e) => {
+      LokaleEinstellungen.setErfolgsanimation(e.target.checked);
+      Anzeige.zeigeToast(
+        e.target.checked ? "Erfolgsanimation aktiviert." : "Erfolgsanimation deaktiviert.",
+      );
+    });
+  },
+
   _renderDarkModeOptionen() {
     const container = document.getElementById("einst-darkmode-optionen");
     const aktuelle = LokaleEinstellungen.getDarkMode();
@@ -282,6 +293,11 @@ const Einstellungen = {
       });
       container.appendChild(btn);
     }
+  },
+
+  _renderErfolgsanimation() {
+    const input = document.getElementById("einst-erfolgsanimation");
+    if (input) input.checked = LokaleEinstellungen.getErfolgsanimation();
   },
 
   // ---------------------------------------------------------------

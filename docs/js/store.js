@@ -755,6 +755,8 @@ const Anzeige = {
   },
 
   zeigeErledigtFeier() {
+    if (!LokaleEinstellungen.getErfolgsanimation()) return;
+
     let el = document.getElementById("erledigt-feier");
     if (!el) {
       el = document.createElement("div");
@@ -995,6 +997,16 @@ const LokaleEinstellungen = {
     d.darkMode = value;
     this._speichern();
     anwendenDarkMode(value);
+  },
+
+  getErfolgsanimation() {
+    return this._laden().erfolgsanimation !== false;
+  },
+
+  setErfolgsanimation(aktiv) {
+    const d = this._laden();
+    d.erfolgsanimation = Boolean(aktiv);
+    this._speichern();
   },
 };
 
