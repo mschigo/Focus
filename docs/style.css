@@ -507,6 +507,69 @@ main {
   outline-offset: 2px;
 }
 
+/* ---------- Erledigt-Feier ---------- */
+
+.erledigt-feier {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.erledigt-feier.is-visible {
+  visibility: visible;
+  animation: erledigt-feier-ausblenden 1.7s ease-out both;
+}
+
+.erledigt-feier__emoji {
+  font-size: clamp(72px, 18vw, 132px);
+  line-height: 1;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.24));
+}
+
+.erledigt-feier.is-visible .erledigt-feier__emoji {
+  animation: erledigt-feier-huepfen 0.75s cubic-bezier(.2, .8, .3, 1.25) both;
+}
+
+.erledigt-feier__text {
+  margin-top: 10px;
+  padding: 7px 18px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow);
+  font-size: clamp(22px, 5vw, 34px);
+  font-weight: 800;
+}
+
+@keyframes erledigt-feier-huepfen {
+  0% { transform: scale(0.2) rotate(-18deg); }
+  55% { transform: scale(1.2) rotate(10deg); }
+  75% { transform: scale(0.92) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@keyframes erledigt-feier-ausblenden {
+  0%, 72% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erledigt-feier.is-visible,
+  .erledigt-feier.is-visible .erledigt-feier__emoji {
+    animation: none;
+  }
+
+  .erledigt-feier.is-visible {
+    opacity: 1;
+  }
+}
+
 /* ---------- Popup ---------- */
 
 .popup-overlay {

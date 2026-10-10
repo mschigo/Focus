@@ -414,6 +414,7 @@ const Dashboard = {
     Store.setAufgabeStatus(aufgabe.Id, neuerStatus);
 
     if (neuerStatus === AufgabenStatus.Erledigt) {
+      Anzeige.zeigeErledigtFeier();
       Anzeige.zeigeToast("Aufgabe erledigt.", false, {
         text: "Zurück",
         dauer: 5000,

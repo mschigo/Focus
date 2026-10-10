@@ -753,6 +753,29 @@ const Anzeige = {
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => { el.hidden = true; }, aktion?.dauer ?? 3000);
   },
+
+  zeigeErledigtFeier() {
+    let el = document.getElementById("erledigt-feier");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "erledigt-feier";
+      el.className = "erledigt-feier";
+      el.setAttribute("role", "status");
+      el.setAttribute("aria-live", "polite");
+      el.innerHTML = `
+        <span class="erledigt-feier__emoji" aria-hidden="true">🥳</span>
+        <span class="erledigt-feier__text">Yippee!</span>`;
+      document.body.appendChild(el);
+    }
+
+    clearTimeout(this._erledigtFeierTimer);
+    el.classList.remove("is-visible");
+    void el.offsetWidth;
+    el.classList.add("is-visible");
+    this._erledigtFeierTimer = setTimeout(() => {
+      el.classList.remove("is-visible");
+    }, 1700);
+  },
 };
 
 /**

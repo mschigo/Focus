@@ -407,6 +407,7 @@ const Aufgabenliste = {
       if (typeof Anzeige !== "undefined") {
         if (vorherigerStatus && vorherigerStatus !== AufgabenStatus.Erledigt &&
             neuerStatus === AufgabenStatus.Erledigt) {
+          Anzeige.zeigeErledigtFeier();
           Anzeige.zeigeToast("Aufgabe erledigt.", false, {
             text: "Zurück",
             dauer: 5000,
