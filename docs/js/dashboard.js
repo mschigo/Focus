@@ -357,11 +357,13 @@ const Dashboard = {
     // 3. Datei- / Web-Link Badges (mehrere Links möglich)
     const links = aufgabe.Links || [];
     const linkHtml = links
-      .map((link) => {
+      .map((link, index) => {
         const rawLink = (link || "").trim();
         if (!rawLink) return "";
-        const icon = istDateiPfad(rawLink) ? "📁" : "🔗";
-        return ` <a href="${escapeHtml(rawLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="checkliste-progress-badge" style="text-decoration: none; color: inherit;" title="${escapeHtml(rawLink)}">${icon}</a>`;
+        const istDatei = istDateiPfad(rawLink);
+        const icon = istDatei ? "📁" : "🔗";
+        const typ = istDatei ? "Dateipfad" : "Link";
+        return ` <a href="${escapeHtml(rawLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="aufgabe-link-btn" aria-label="${typ} ${index + 1} für ${escapeHtml(aufgabe.Titel)} öffnen" title="${escapeHtml(rawLink)}">${icon}</a>`;
       })
       .join("");
 
