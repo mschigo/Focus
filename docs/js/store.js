@@ -795,7 +795,7 @@ const Anzeige = {
       oscillator.type = "sine";
       oscillator.frequency.setValueAtTime(1250, start);
       oscillator.frequency.exponentialRampToValueAtTime(750, start + 0.075);
-      gain.gain.setValueAtTime(0.32, start);
+      gain.gain.setValueAtTime(1, start);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.085);
       oscillator.connect(gain);
       gain.connect(context.destination);
