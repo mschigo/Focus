@@ -780,6 +780,32 @@ const Anzeige = {
     }, 1700);
   },
 
+  spieleChecklistenKlick() {
+    const AudioContextKlasse = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextKlasse) return;
+
+    try {
+      this._audioContext ??= new AudioContextKlasse();
+      const context = this._audioContext;
+      if (context.state === "suspended") void context.resume();
+
+      const start = context.currentTime;
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(1250, start);
+      oscillator.frequency.exponentialRampToValueAtTime(750, start + 0.075);
+      gain.gain.setValueAtTime(0.32, start);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.085);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start);
+      oscillator.stop(start + 0.085);
+    } catch (err) {
+      console.warn("Focus: Checklisten-Klick konnte nicht wiedergegeben werden.", err);
+    }
+  },
+
   _spieleErledigtTon() {
     const AudioContextKlasse = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextKlasse) return;
@@ -792,7 +818,7 @@ const Anzeige = {
       const start = context.currentTime;
       const master = context.createGain();
       master.gain.setValueAtTime(0.0001, start);
-      master.gain.exponentialRampToValueAtTime(0.16, start + 0.018);
+      master.gain.exponentialRampToValueAtTime(0.32, start + 0.018);
       master.gain.exponentialRampToValueAtTime(0.0001, start + 0.48);
       master.connect(context.destination);
 

@@ -77,6 +77,7 @@ const Dashboard = {
     liste.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
       checkbox.addEventListener("change", () => {
         this._checklisteEntwurf[Number(checkbox.dataset.index)] = checkbox.checked;
+        if (checkbox.checked) Anzeige.spieleChecklistenKlick();
       });
     });
 

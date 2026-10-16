@@ -333,6 +333,7 @@ const Aufgabenliste = {
       row.querySelector(".check-toggle")?.addEventListener("change", (e) => {
         eintrag.IstErledigt = e.target.checked;
         row.querySelector("span")?.classList.toggle("is-erledigt", eintrag.IstErledigt);
+        if (eintrag.IstErledigt) Anzeige.spieleChecklistenKlick();
       });
 
       row.querySelector(".btn-icon")?.addEventListener("click", () => {
