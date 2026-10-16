@@ -755,6 +755,7 @@ const Anzeige = {
   },
 
   zeigeErledigtFeier() {
+    this._spieleErledigtTon();
     if (!LokaleEinstellungen.getErfolgsanimation()) return;
 
     let el = document.getElementById("erledigt-feier");
@@ -777,6 +778,43 @@ const Anzeige = {
     this._erledigtFeierTimer = setTimeout(() => {
       el.classList.remove("is-visible");
     }, 1700);
+  },
+
+  _spieleErledigtTon() {
+    const AudioContextKlasse = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextKlasse) return;
+
+    try {
+      this._audioContext ??= new AudioContextKlasse();
+      const context = this._audioContext;
+      if (context.state === "suspended") void context.resume();
+
+      const start = context.currentTime;
+      const master = context.createGain();
+      master.gain.setValueAtTime(0.0001, start);
+      master.gain.exponentialRampToValueAtTime(0.16, start + 0.018);
+      master.gain.exponentialRampToValueAtTime(0.0001, start + 0.48);
+      master.connect(context.destination);
+
+      [
+        { frequenz: 659.25, beginn: 0, dauer: 0.22 },
+        { frequenz: 987.77, beginn: 0.13, dauer: 0.32 },
+      ].forEach((ton) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(ton.frequenz, start + ton.beginn);
+        gain.gain.setValueAtTime(0.0001, start + ton.beginn);
+        gain.gain.exponentialRampToValueAtTime(0.7, start + ton.beginn + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + ton.beginn + ton.dauer);
+        oscillator.connect(gain);
+        gain.connect(master);
+        oscillator.start(start + ton.beginn);
+        oscillator.stop(start + ton.beginn + ton.dauer);
+      });
+    } catch (err) {
+      console.warn("Focus: Erfolgston konnte nicht wiedergegeben werden.", err);
+    }
   },
 };
 
