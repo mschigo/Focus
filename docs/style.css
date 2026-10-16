@@ -652,6 +652,14 @@ main {
   padding: 4px;
 }
 
+.neu-weitere-angaben > summary {
+  display: none;
+}
+
+.neu-weitere-angaben__inhalt {
+  display: contents;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 600px) {
@@ -735,6 +743,41 @@ main {
 
   .form-field label {
     font-size: 11px;
+  }
+
+  .neu-weitere-angaben {
+    margin: 10px 0 4px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+  }
+
+  .neu-weitere-angaben > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 10px;
+    color: var(--color-primary);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .neu-weitere-angaben > summary::after {
+    content: "＋";
+    margin-left: auto;
+    font-size: 18px;
+  }
+
+  .neu-weitere-angaben[open] > summary::after {
+    content: "−";
+  }
+
+  .neu-weitere-angaben__inhalt {
+    display: block;
+    padding: 4px 10px 10px;
+    border-top: 1px solid var(--color-border);
   }
 
   .aufgabe-form textarea.form-input {

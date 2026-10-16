@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#1565C0" />
 <link rel="icon" href="img/focus-icon.svg" type="image/svg+xml" />
 <link rel="manifest" href="site.webmanifest" />
-<link rel="stylesheet" href="style.css?v=11" />
+<link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
 
@@ -312,6 +312,14 @@
             <select id="neu-projekt" class="form-input"></select>
           </div>
         </div>
+        <div class="form-field mobile-kernfeld-faelligkeit">
+          <label for="neu-faelligkeit">Fälligkeit (optional)</label>
+          <input type="date" id="neu-faelligkeit" class="form-input" lang="de-CH" />
+        </div>
+
+        <details id="neu-weitere-angaben" class="neu-weitere-angaben" open>
+          <summary>Weitere Angaben</summary>
+          <div class="neu-weitere-angaben__inhalt">
         <div class="form-row">
           <div class="form-field">
             <label for="neu-prioritaet">Priorität</label>
@@ -325,10 +333,6 @@
           <div class="form-field">
             <label for="neu-startdatum">Startdatum (optional)</label>
             <input type="date" id="neu-startdatum" class="form-input" lang="de-CH" />
-          </div>
-          <div class="form-field">
-            <label for="neu-faelligkeit">Fälligkeit (optional)</label>
-            <input type="date" id="neu-faelligkeit" class="form-input" lang="de-CH" />
           </div>
         </div>
 
@@ -366,6 +370,8 @@
             <button type="button" id="neu-checkliste-add-btn" class="btn-secondary" style="padding: 0 14px;">+</button>
           </div>
         </div>
+          </div>
+        </details>
 
         <div class="popup-footer">
           <button type="submit" class="btn-primary">➕ Aufgabe hinzufügen</button>
@@ -382,6 +388,6 @@
 <script src="js/dashboard.js?v=6"></script>
 <script src="js/aufgabenliste.js?v=7"></script>
 <script src="js/einstellungen.js?v=6"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>

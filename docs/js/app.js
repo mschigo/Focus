@@ -96,6 +96,10 @@ const App = {
     // Button auf Dashboard öffnet Popup
     document.getElementById("dashboard-fab-neue-aufgabe")?.addEventListener("click", () => {
       document.getElementById("neue-aufgabe-form").reset();
+      const weitereAngaben = document.getElementById("neu-weitere-angaben");
+      if (weitereAngaben) {
+        weitereAngaben.open = !window.matchMedia("(max-width: 600px)").matches;
+      }
 
       tempNeueLinks = [""];
       const linksContainer = document.getElementById("neu-links-container");
