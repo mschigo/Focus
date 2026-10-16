@@ -818,7 +818,7 @@ const Anzeige = {
       const start = context.currentTime;
       const master = context.createGain();
       master.gain.setValueAtTime(0.0001, start);
-      master.gain.exponentialRampToValueAtTime(0.5, start + 0.018);
+      master.gain.exponentialRampToValueAtTime(1, start + 0.018);
       master.gain.exponentialRampToValueAtTime(0.0001, start + 0.48);
       master.connect(context.destination);
 
