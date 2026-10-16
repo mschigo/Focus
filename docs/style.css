@@ -825,6 +825,22 @@ main {
     font-size: 13px;
   }
 
+  #neue-aufgabe-popup .popup-footer button {
+    min-height: 50px;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  #neue-aufgabe-popup .checkliste-add-row button,
+  #neue-aufgabe-popup .zeitbuchung-add-row button,
+  #neue-aufgabe-popup .link-feld-row .icon-btn {
+    min-width: 46px;
+    min-height: 46px;
+    padding: 8px 12px !important;
+    font-size: 18px;
+  }
+
   .btn-row {
     flex-direction: column;
     gap: 6px;
