@@ -826,19 +826,19 @@ main {
   }
 
   #neue-aufgabe-popup .popup-footer button {
-    min-height: 50px;
-    padding: 12px 16px;
-    font-size: 16px;
+    min-height: 75px;
+    padding: 18px 18px;
+    font-size: 17px;
     font-weight: 700;
   }
 
   #neue-aufgabe-popup .checkliste-add-row button,
   #neue-aufgabe-popup .zeitbuchung-add-row button,
   #neue-aufgabe-popup .link-feld-row .icon-btn {
-    min-width: 46px;
-    min-height: 46px;
-    padding: 8px 12px !important;
-    font-size: 18px;
+    min-width: 69px;
+    min-height: 69px;
+    padding: 12px 16px !important;
+    font-size: 20px;
   }
 
   .btn-row {
